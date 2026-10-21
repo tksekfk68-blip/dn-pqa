@@ -124,6 +124,14 @@
     .card-grid{grid-template-columns:1fr;}
   }
   .item-card-badge.done{background:var(--green-soft);color:var(--green);}
+  /* PC 등 넓은 화면: 본문 폭을 제한하고 품목 카드를 3열로. 모바일(≤767px)은 위 규칙 그대로. */
+  @media (min-width:768px){
+    .wrap{max-width:960px;}
+    .card-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .item-card.wide{grid-column:1 / -1;}
+    .savebar{max-width:960px;}
+    #screen-start > *{width:100%;max-width:440px;margin-left:auto;margin-right:auto;}
+  }
   .item-card-ref{font-size:11.5px;color:var(--gray);font-weight:600;}
   .goto-straight{width:100%;padding:13px;background:var(--card);border:1px dashed var(--lgray);border-radius:var(--r-sm);
     font-size:13.5px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;margin-top:2px;}
@@ -189,7 +197,16 @@
   /* ===== HE 라인 전용 위젯 (VMCT의 axis-block/mcell과 별개 — 겸용하지 않음) ===== */
   .he-distbar{margin-top:9px;background:var(--paper);border-radius:var(--r-sm);padding:9px 11px;
     font-size:11.5px;color:var(--gray);font-weight:600;text-align:center;}
-  .he-grid{display:grid;grid-template-columns:18px repeat(3,minmax(0,1fr));gap:4px;align-items:center;}
+  .he-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px 4px;align-items:start;}
+  .he-side{font-size:13px;font-weight:800;color:var(--dgray);margin:12px 0 6px;}
+  .he-side:first-child{margin-top:0;}
+  .he-targetline{margin-top:9px;font-size:13px;font-weight:700;color:var(--navy);display:flex;gap:14px;flex-wrap:wrap;}
+  .he-targetline .k{color:var(--gray);font-weight:700;}
+  .he-res{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:6px 10px;align-items:baseline;margin-top:12px;
+    background:var(--paper);border-radius:var(--r-sm);padding:11px 12px;font-size:13px;}
+  .he-res .h{font-size:11px;color:var(--gray);font-weight:700;}
+  .he-res .v{font-size:16px;font-weight:800;color:var(--navy);}
+  .he-res .v small{font-size:10.5px;color:var(--gray);font-weight:600;margin-left:4px;}
   .he-pt-head{font-size:9.5px;color:var(--gray);font-weight:700;text-align:center;}
   .he-rowlabel{font-size:14px;font-weight:800;color:var(--dgray);text-align:center;}
   .he-fixed{height:40px;display:flex;align-items:center;justify-content:center;background:var(--paper);
@@ -422,15 +439,15 @@
 
         <div class="card-grid" id="item-cards">
           <button type="button" class="item-card" data-part="SADDLE" id="card-SADDLE">
-            <div class="item-card-top"><span class="item-card-name">SADDLE</span><span class="item-card-method">수준기</span><span class="item-card-badge" id="badge-SADDLE">○ 미측정</span></div>
+            <div class="item-card-top"><span class="item-card-name">SADDLE</span><span class="item-card-badge" id="badge-SADDLE">○ 미측정</span></div>
             <div class="item-card-ref" id="cardref-SADDLE">목표치 —</div>
           </button>
           <button type="button" class="item-card" data-part="TABLE" id="card-TABLE">
-            <div class="item-card-top"><span class="item-card-name">TABLE</span><span class="item-card-method">수준기</span><span class="item-card-badge" id="badge-TABLE">○ 미측정</span></div>
+            <div class="item-card-top"><span class="item-card-name">TABLE</span><span class="item-card-badge" id="badge-TABLE">○ 미측정</span></div>
             <div class="item-card-ref" id="cardref-TABLE">목표치 —</div>
           </button>
           <button type="button" class="item-card" data-part="BED" id="card-BED">
-            <div class="item-card-top"><span class="item-card-name">BED</span><span class="item-card-method">수준기</span><span class="item-card-badge" id="badge-BED">○ 미측정</span></div>
+            <div class="item-card-top"><span class="item-card-name">BED</span><span class="item-card-badge" id="badge-BED">○ 미측정</span></div>
             <div class="item-card-ref" id="cardref-BED">목표치 —</div>
           </button>
           <button type="button" class="item-card wide" id="card-LEVEL">
@@ -555,15 +572,22 @@
         <div class="card info">
           <label class="f">각인번호 <span class="req">*</span></label>
           <input type="text" id="he-mark" placeholder="예: COL-24-0731">
+          <div class="he-targetline" id="he-target-line"></div>
           <div class="he-distbar" id="he-dist-label">—</div>
         </div>
 
         <div class="card">
+          <div class="card-h"><span class="dot"></span><h2>측정 설정</h2></div>
+          <div id="he-setup"></div>
+        </div>
+
+        <div class="card">
           <div class="card-h"><span class="dot"></span><h2>측정 · 인디게이터 값 (μm)</h2></div>
-          <div class="seg-lab seg-lab-r">1번째는 0 셋팅 지점(고정) · 나머지 두 지점만 입력</div>
+          <div class="seg-lab seg-lab-r">시작점에서 0 셋팅 후 구간별로 μm 입력</div>
           <div id="he-segs"></div>
           <div class="divider"></div>
           <div id="he-charts"></div>
+          <div id="he-result"></div>
         </div>
 
         <div class="savebar" id="he-savebar">
@@ -1364,8 +1388,7 @@
       btn.dataset.part=part;
       btn.innerHTML=
         '<div class="item-card-top"><span class="item-card-name">'+escapeHTML(part)+'</span>'+
-        '<span class="item-card-method">인디게이터</span>'+
-        '<span class="item-card-badge'+(sent?' done':'')+'">'+(sent?'● 완료':'○ 미측정')+'</span></div>'+
+                '<span class="item-card-badge'+(sent?' done':'')+'">'+(sent?'● 완료':'○ 미측정')+'</span></div>'+
         '<div class="item-card-ref">목표 L'+fmtHE(s1.L)+' / R'+fmtHE(s1.R)+' μm</div>';
       btn.addEventListener('click',function(){ openHEPart(part); });
       container.insertBefore(btn, levelCard);
@@ -1447,13 +1470,46 @@
   /* 진직도 계산 단일 함수 — 독립 계산기와 품목별 상세계산이 모두 이것을 쓴다.
      m: 구간별 원본 눈금값, resKey: 분해능 키, segLen: 균등 구간길이(측정 길이 ÷ 구간 수) */
   function computeDetail(m,resKey,segLen){
-    var k=(RESOLUTIONS[resKey]||RESOLUTIONS["0.02/m"]).perMm(segLen);
-    var N=m.length,cum=[0],cor=[0],dif=[0],h=[0];
+    // resKey==="um": 입력이 이미 μm(HE) — 분해능을 곱하지 않는다
+    var k=(resKey==="um")?0.001:(RESOLUTIONS[resKey]||RESOLUTIONS["0.02/m"]).perMm(segLen);
+    var N=m.length,cum=[0],cor=[0],dif=[0],h=[0],um=[0];
     for(var i=1;i<=N;i++)cum[i]=cum[i-1]+(m[i-1]||0);
     var total=cum[N];
     for(var i=1;i<=N;i++)cor[i]=(total/N)*i;
-    for(var i=0;i<=N;i++){dif[i]=cum[i]-cor[i];h[i]=dif[i]*k;}
-    return {cum:cum,cor:cor,dif:dif,h:h};
+    for(var i=0;i<=N;i++){dif[i]=cum[i]-cor[i];h[i]=dif[i]*k;um[i]=h[i]*1000;} // h: mm, um: μm (화면 표시·진직도는 um)
+    return {cum:cum,cor:cor,dif:dif,h:h,um:um};
+  }
+
+  /* 측정 설정(분해능/수준기 길이/구간 간격/구간 수/총 길이) — 진직도 계산기와 HE 화면이 같이 쓴다 */
+  function setupHTML(idp,init){
+    init=init||{};
+    var res=init.res||"0.02/m",lv=init.lv==null?200:init.lv,pitch=init.pitch==null?lv:init.pitch,n=init.n==null?5:init.n;
+    return '<label class="f">분해능</label><select id="'+idp+'-res" style="width:100%;margin-bottom:10px">'+
+      Object.keys(RESOLUTIONS).map(function(k){return '<option value="'+k+'"'+(k===res?' selected':'')+'>'+RESOLUTIONS[k].label+'</option>';}).join('')+'</select>'+
+      '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px"><div><label class="f">수준기 길이 (mm) · 기록용</label><input type="number" id="'+idp+'-lv" value="'+lv+'"></div>'+
+      '<div><label class="f">구간 간격 (mm)</label><input type="number" id="'+idp+'-pitch" value="'+pitch+'"></div>'+
+      '<div><label class="f">구간 수 (측정 횟수)</label><input type="number" id="'+idp+'-n" min="1" step="1" value="'+n+'"></div>'+
+      '<div><label class="f">총 측정 길이 (mm)</label><input type="number" id="'+idp+'-ml" readonly tabindex="-1"></div></div>';
+  }
+  function fmtLen(x){return String(Math.round(x*100)/100);}
+  /* onRebuild: 간격/구간 수/수준기 길이가 바뀔 때, onCalc: 분해능만 바뀔 때 */
+  function wireSetup(idp,init,onRebuild,onCalc){
+    var S={res:document.getElementById(idp+'-res'),lv:document.getElementById(idp+'-lv'),
+      pitch:document.getElementById(idp+'-pitch'),n:document.getElementById(idp+'-n'),ml:document.getElementById(idp+'-ml')};
+    var pitchDirty=!!init&&init.pitch!=null&&init.lv!=null&&String(init.pitch)!==String(init.lv);
+    S.segLen=function(){return parseFloat(S.pitch.value)||0;}; // 높이차 계산의 구간 길이 = 구간 간격 그대로
+    S.count=function(){var n=Math.round(parseFloat(S.n.value));return n>=1?n:0;};
+    S.refresh=function(){var n=S.count(),p=S.segLen();S.ml.value=(n&&p)?fmtLen(p*n):"";};
+    S.read=function(){return {res:S.res.value,lv:parseFloat(S.lv.value)||0,pitch:S.segLen(),n:S.count(),ml:parseFloat(S.ml.value)||0};};
+    S.lv.addEventListener('input',function(){
+      if(!pitchDirty) S.pitch.value=S.lv.value; // 구간 간격을 직접 고친 뒤에는 덮어쓰지 않는다
+      S.refresh(); onRebuild();
+    });
+    S.pitch.addEventListener('input',function(){ pitchDirty=true; S.refresh(); onRebuild(); });
+    S.n.addEventListener('input',function(){ S.refresh(); onRebuild(); });
+    S.res.addEventListener('change',onCalc);
+    S.refresh();
+    return S;
   }
   function straightness(h){var mx=h[0],mn=h[0];for(var i=1;i<h.length;i++){if(h[i]>mx)mx=h[i];if(h[i]<mn)mn=h[i];}return mx-mn;}
 
@@ -1672,12 +1728,7 @@
   function straightTool(hostEl,idp){
     hostEl.innerHTML=
       '<div class="card"><div class="card-h"><span class="dot"></span><h2>측정 설정</h2></div>'+
-      '<label class="f">분해능</label><select id="'+idp+'-res" style="width:100%;margin-bottom:10px">'+
-        Object.keys(RESOLUTIONS).map(function(k){return '<option value="'+k+'">'+RESOLUTIONS[k].label+'</option>';}).join('')+'</select>'+
-      '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px"><div><label class="f">수준기 길이 (mm) · 기록용</label><input type="number" id="'+idp+'-lv" value="200"></div>'+
-      '<div><label class="f">구간 간격 (mm)</label><input type="number" id="'+idp+'-pitch" value="200"></div>'+
-      '<div><label class="f">구간 수 (측정 횟수)</label><input type="number" id="'+idp+'-n" min="1" step="1" value="5"></div>'+
-      '<div><label class="f">총 측정 길이 (mm)</label><input type="number" id="'+idp+'-ml" readonly tabindex="-1"></div></div></div>'+
+      setupHTML(idp)+'</div>'+
 
       '<div class="card"><div class="card-h"><span class="dot"></span><h2>구간별 수준기 값</h2></div>'+
       '<div class="notice"><span class="nic">＋</span><div>물방울이 <b>우측</b>으로 이동 → <b>＋</b> (기본)<br>'+
@@ -1689,20 +1740,18 @@
       '<div class="chart-wrap"><div id="'+idp+'-chart"></div></div>'+
       '<div class="tbl-t">계산 표</div>'+
       '<div class="tbl-scroll"><table class="ctab"><thead><tr>'+
-      '<th>순번</th><th>구간</th><th>측정치</th><th>누적치</th><th>보정치</th><th>누적−보정</th><th>높이차</th>'+
+      '<th>순번</th><th>구간</th><th>측정치</th><th>누적치</th><th>보정치</th><th>누적−보정</th><th>높이차(μm)</th>'+
       '</tr></thead><tbody id="'+idp+'-tbody"></tbody></table></div>'+
       '<input type="hidden" id="'+idp+'-val"></div>';
 
-    var lv=document.getElementById(idp+'-lv'),ml=document.getElementById(idp+'-ml'),
-        pitch=document.getElementById(idp+'-pitch'),resEl=document.getElementById(idp+'-res'),
-        nEl=document.getElementById(idp+'-n'),segs=document.getElementById(idp+'-segs'),
+    var segs=document.getElementById(idp+'-segs'),
         chart=document.getElementById(idp+'-chart'),tbody=document.getElementById(idp+'-tbody'),
         cntTag=document.getElementById(idp+'-cntTag');
-    var meas=[],pitchDirty=false;
-
+    var meas=[];
+    var S=wireSetup(idp,null,function(){rebuild();},function(){calc();});
+    var lv=S.lv,ml=S.ml,pitch=S.pitch,resEl=S.res,nEl=S.n;
     /* 구간 길이 = 구간 간격 그대로. 총 측정 길이 = 구간 간격 × 구간 수 (표시·기록용). */
-    function curSegLen(){ return parseFloat(pitch.value)||0; }
-    function fmtLen(x){return String(Math.round(x*100)/100);}
+    function curSegLen(){ return S.segLen(); }
 
     function rebuild(){
       var n=Math.round(parseFloat(nEl.value)),SL=curSegLen();
@@ -1713,8 +1762,8 @@
       for(var i=0;i<n;i++){
         var c=document.createElement('div');c.className='seg-cell wide';
         c.innerHTML='<div class="cl">'+fmtLen(i*SL)+'~'+fmtLen((i+1)*SL)+'</div>'+
-          '<div class="sgn-row"><button type="button" class="sgn" data-i="'+i+'">＋</button>'+
-          '<input type="number" inputmode="decimal" placeholder="–" data-i="'+i+'" value="'+(meas[i]?Math.abs(meas[i]):'')+'"></div>';
+          '<div class="sgn-row"><button type="button" class="sgn'+(meas[i]<0?' neg':'')+'" data-i="'+i+'">'+(meas[i]<0?'－':'＋')+'</button>'+
+          '<input type="number" inputmode="decimal" placeholder="–" data-i="'+i+'"'+(meas[i]<0?' class="neg"':'')+' value="'+(meas[i]?Math.abs(meas[i]):'')+'"></div>';
         segs.appendChild(c);
       }
       segs.querySelectorAll('input').forEach(function(inp){
@@ -1742,7 +1791,7 @@
 
     function calc(){
       var SL=curSegLen(),N=meas.length;
-      var d=computeDetail(meas,resEl.value,SL),h=d.h,sv=straightness(h);
+      var d=computeDetail(meas,resEl.value,SL),h=d.um,sv=straightness(h); // h·sv 모두 μm
       STRAIGHT[idp]={res:resEl.value,lv:parseFloat(lv.value)||0,pitch:parseFloat(pitch.value)||0,
         ml:parseFloat(ml.value)||0,n:N,meas:meas.slice(),sv:sv};
       if(N<1){chart.innerHTML="";tbody.innerHTML="";return;}
@@ -1785,8 +1834,8 @@
         g+='<line x1="'+(xs-4)+'" y1="'+yTop.toFixed(1)+'" x2="'+(xs+4)+'" y2="'+yTop.toFixed(1)+'" stroke="#E24B4A" stroke-width="1.6"/>';
         g+='<line x1="'+(xs-4)+'" y1="'+yBot.toFixed(1)+'" x2="'+(xs+4)+'" y2="'+yBot.toFixed(1)+'" stroke="#E24B4A" stroke-width="1.6"/>';
       }
-      g+='<text x="'+(W-padR)+'" y="'+(padT-13)+'" font-size="11" font-weight="800" fill="#E24B4A" text-anchor="end">진직도 '+fmt(sv)+'</text>';
-      g+='<text x="'+padL+'" y="'+(padT-13)+'" font-size="10" font-weight="700" fill="#7C848C">높이차 (구간별)</text>';
+      g+='<text x="'+(W-padR)+'" y="'+(padT-13)+'" font-size="11" font-weight="800" fill="#E24B4A" text-anchor="end">진직도 '+fmt(sv)+' μm</text>';
+      g+='<text x="'+padL+'" y="'+(padT-13)+'" font-size="10" font-weight="700" fill="#7C848C">높이차 (구간별, μm)</text>';
       var step=N>10?Math.ceil(N/8):1;
       for(var i=0;i<=N;i+=step)
         g+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-9)+'" font-size="9" fill="#7C848C" text-anchor="middle">'+i+'</text>';
@@ -1804,13 +1853,6 @@
       }
       tbody.innerHTML=rows;
     }
-    lv.addEventListener('input',function(){
-      if(!pitchDirty) pitch.value=lv.value; // 구간 간격을 직접 고친 뒤에는 덮어쓰지 않는다
-      rebuild();
-    });
-    pitch.addEventListener('input',function(){ pitchDirty=true; rebuild(); });
-    nEl.addEventListener('input',rebuild);
-    resEl.addEventListener('change',calc);
     rebuild();
   }
 
@@ -2033,11 +2075,16 @@
      완전히 별개의 구현. 조립 전/후 탭이 없고, 측정점 3개(첫 점은 0 고정)를
      L·R 두 줄로 재는 인디게이터 방식이라 겸용하지 않는다.
      ========================================================= */
-  var HE_STATE={};       // 품목명 → {mark, L:[pt1,pt2], R:[pt1,pt2], enteredL:[bool,bool], enteredR:[bool,bool]}
+  var HE_STATE={};       // 품목명 → {mark, cfg:{res,lv,pitch,n}, L:[구간별 μm], R:[…], enteredL:[bool…], enteredR:[bool…]}
   var HE_CURRENT_PART=null;
+  var HE_SETUP=null;     // 현재 화면의 측정 설정(wireSetup 결과)
   function heStateFor(part){
-    if(!HE_STATE[part]) HE_STATE[part]={mark:'',L:[null,null],R:[null,null],enteredL:[false,false],enteredR:[false,false]};
+    if(!HE_STATE[part]) HE_STATE[part]={mark:'',cfg:null,L:[],R:[],enteredL:[],enteredR:[]};
     return HE_STATE[part];
+  }
+  function heDefaultN(spec){
+    var d=spec&&spec.sections[1]&&spec.sections[1].distEnd;
+    return d>0?Math.max(1,Math.round(d/200)):5;
   }
 
   function openHEPart(part){
@@ -2046,38 +2093,65 @@
     showPanel('he');
   }
 
-  function heCellHTML(side,pt,target){
+  function heCellHTML(side,pt,pitch){
     var st=heStateFor(HE_CURRENT_PART);
     var arr = side==='L' ? st.L : st.R;
     var entered = side==='L' ? st.enteredL : st.enteredR;
     var v = entered[pt] ? arr[pt] : '';
-    return '<div class="he-cell"><div class="he-cell-row">'+
+    return '<div class="he-cell"><div class="he-pt-head">'+(pt+1)+(pitch?' · '+fmtLen((pt+1)*pitch):'')+'</div><div class="he-cell-row">'+
       '<input type="number" inputmode="decimal" data-side="'+side+'" data-pt="'+pt+'" placeholder="–" value="'+v+'">'+
       signBtnHTML('data-sign-side="'+side+'" data-sign-pt="'+pt+'"')+
-      '</div><div class="he-target">목표 '+fmtHE(target)+'μm</div></div>';
+      '</div></div>';
   }
 
   function renderHEPanel(part){
     var spec=getHESpec(CUR.vendor,CUR.model);
+    var st=heStateFor(part);
     document.getElementById('he-part-title').textContent=part+' 측정';
-    document.getElementById('he-mark').value=heStateFor(part).mark;
+    document.getElementById('he-mark').value=st.mark;
     if(!spec){
       document.getElementById('he-dist-label').textContent='목표치를 아직 불러오지 못했습니다';
+      document.getElementById('he-target-line').innerHTML='';
+      document.getElementById('he-setup').innerHTML='';
       document.getElementById('he-segs').innerHTML='';
       document.getElementById('he-charts').innerHTML='';
+      document.getElementById('he-result').innerHTML='';
+      HE_SETUP=null;
       return;
     }
     var s0=spec.sections[0], s1=spec.sections[1];
+    // 시트의 거리값은 참고 표시일 뿐 — 입력칸을 구간별로 나누거나 색으로 구분하지 않는다
     document.getElementById('he-dist-label').textContent=
       s0.distStart+'mm — '+s0.name+' — '+s0.distEnd+'mm — '+s1.name+' — '+s1.distEnd+'mm';
+    document.getElementById('he-target-line').innerHTML=
+      '<span class="k">구배 목표치</span><span>L <b>'+fmtHE(s1.L)+'</b>μm</span><span>R <b>'+fmtHE(s1.R)+'</b>μm</span>';
 
-    var html='<div class="he-grid">'+
-      '<div></div><div class="he-pt-head">0 셋팅</div>'+
-      '<div class="he-pt-head">'+escapeHTML(s0.name)+'</div>'+
-      '<div class="he-pt-head">'+escapeHTML(s1.name)+'</div>'+
-      '<div class="he-rowlabel">L</div><div class="he-fixed">0</div>'+heCellHTML('L',0,s0.L)+heCellHTML('L',1,s1.L)+
-      '<div class="he-rowlabel">R</div><div class="he-fixed">0</div>'+heCellHTML('R',0,s0.R)+heCellHTML('R',1,s1.R)+
-      '</div>';
+    if(!st.cfg) st.cfg={res:'0.02/m',lv:200,pitch:200,n:heDefaultN(spec)};
+    document.getElementById('he-setup').innerHTML=setupHTML('he',st.cfg);
+    function saveCfg(){ var r=HE_SETUP.read(); st.cfg={res:r.res,lv:r.lv,pitch:r.pitch,n:r.n}; }
+    HE_SETUP=wireSetup('he',st.cfg,
+      function(){ saveCfg(); renderHEInputs(part); },
+      function(){ saveCfg(); });   // 분해능은 기록용 — 계산에 쓰지 않으므로 다시 계산하지 않는다
+    renderHEInputs(part);
+  }
+
+  // 구간 수(n)에 맞춰 L·R 입력칸을 정확히 n개씩 다시 그린다. (0 셋팅은 시작점 안내일 뿐 칸이 아님)
+  function renderHEInputs(part){
+    var st=heStateFor(part);
+    var n=HE_SETUP?HE_SETUP.count():0, pitch=HE_SETUP?HE_SETUP.segLen():0;
+    ['L','R'].forEach(function(side){
+      var arr=st[side], en=st['entered'+side];
+      arr.length=n; en.length=n;
+      for(var i=0;i<n;i++){ if(typeof arr[i]!=='number') arr[i]=0; en[i]=!!en[i]; }
+    });
+    var html='';
+    if(n>0){
+      ['L','R'].forEach(function(side){
+        html+='<div class="he-side">'+side+'</div><div class="he-grid">';
+        for(var i=0;i<n;i++) html+=heCellHTML(side,i,pitch);
+        html+='</div>';
+      });
+    }
     document.getElementById('he-segs').innerHTML=html;
 
     document.querySelectorAll('#he-segs input').forEach(function(inp){
@@ -2085,7 +2159,6 @@
       inp.addEventListener('focus',function(){ this.select(); });
       inp.addEventListener('input',function(e){
         var side=e.target.dataset.side, pt=+e.target.dataset.pt;
-        var st=heStateFor(part);
         var arr = side==='L' ? st.L : st.R;
         var entered = side==='L' ? st.enteredL : st.enteredR;
         var val=parseFloat(e.target.value);
@@ -2112,83 +2185,88 @@
 
   function updateHEFillStat(part){
     var st=heStateFor(part);
-    var total=4, filled=0;
+    var total=st.L.length+st.R.length, filled=0;
     st.enteredL.forEach(function(b){ if(b) filled++; });
     st.enteredR.forEach(function(b){ if(b) filled++; });
     var el=document.getElementById('he-fillstat');
     if(el) el.innerHTML=total+"개 중 <b>"+filled+"</b>개 입력됨";
   }
 
-  // VMCT의 역포물선 그래프(drawAll)를 재사용하지 않고, 3점을 잇는 단순 꺾은선을 새로 그린다.
-  // 목표가 음수(DVF5000/DVF4000)든 양수(DVF6500)든 그대로 그려지도록 방향을 고정하지 않는다.
+  // 입력값(μm)은 환산 없이 그대로 쓴다. 누적·진직은 진직도 계산기와 같은 computeDetail(…,"um",…) 사용.
+  function heSideCalc(part,side){
+    var st=heStateFor(part), arr=st[side], en=st['entered'+side];
+    var last=-1; en.forEach(function(b,i){ if(b) last=i; });
+    if(last<0) return null;
+    var d=computeDetail(arr,"um",HE_SETUP?HE_SETUP.segLen():0);
+    return {d:d,last:last,cum:d.cum[d.cum.length-1],str:straightness(d.um)};
+  }
+
+  // 구배 형상 하나만: 입력값의 누적 합을 L·R 두 줄로 연결
   function heDrawChart(part){
     var spec=getHESpec(CUR.vendor,CUR.model);
-    if(!spec) return '';
-    var s0=spec.sections[0], s1=spec.sections[1];
-    var st=heStateFor(part);
+    if(!spec||!HE_SETUP) return '';
+    var c={L:heSideCalc(part,'L'),R:heSideCalc(part,'R')};
+    if(!c.L&&!c.R) return ''; // 값이 하나도 없으면 영역 자체를 숨김 (VMCT와 동일 규칙)
+    var n=HE_SETUP.count(), pitch=HE_SETUP.segLen();
 
-    function ptVal(arr,entered,i){ return entered[i] ? arr[i] : null; }
-    var L1=ptVal(st.L,st.enteredL,0), L2=ptVal(st.L,st.enteredL,1);
-    var R1=ptVal(st.R,st.enteredR,0), R2=ptVal(st.R,st.enteredR,1);
-    if(L1===null&&L2===null&&R1===null&&R2===null) return ''; // 값이 하나도 없으면 영역 자체를 숨김 (VMCT와 동일 규칙)
-
-    var W=380,H=164,padX=36,plotTop=18,plotBottom=146;
-    var xL=padX,xR=W-padX;
-    var d0=0,d1=s0.distEnd,d2=s1.distEnd;
-    function xAt(d){ return xL+(d-d0)/((d2-d0)||1)*(xR-xL); }
-    var x0=xAt(d0), x1=xAt(d1), x2=xAt(d2);
-
+    var W=380,H=176,padL=36,padR=20,plotTop=22,plotBottom=150;
+    function xAt(i){ return padL+i/(n||1)*(W-padL-padR); }
     var vals=[0];
-    [L1,L2,R1,R2].forEach(function(v){ if(v!==null) vals.push(v); });
+    ['L','R'].forEach(function(s){ if(c[s]) for(var i=0;i<=c[s].last+1;i++) vals.push(c[s].d.cum[i]); });
     var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
     if(minV===maxV){ minV-=10; maxV+=10; }
-    var pad=(maxV-minV)*0.2;
-    minV-=pad; maxV+=pad;
-    var scale=(plotBottom-plotTop)/(maxV-minV);
-    function yAt(v){ return plotBottom-(v-minV)*scale; } // 0이 축 중앙 부근에 오도록 자동 스케일 — 위아래 방향 고정 없음
+    var pad=(maxV-minV)*0.2; minV-=pad; maxV+=pad;
+    function yAt(v){ return plotBottom-(v-minV)*(plotBottom-plotTop)/(maxV-minV); }
 
-    function seg(xa,ya,xb,yb,col){
-      return '<line x1="'+xa.toFixed(1)+'" y1="'+ya.toFixed(1)+'" x2="'+xb.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="'+col+'" stroke-width="2.4" stroke-linecap="round"/>';
-    }
-    function dot(x,y,col){
-      return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#fff" stroke="'+col+'" stroke-width="1.6"/>';
-    }
-    function label(x,y,v,col,dy){
-      return '<text x="'+x.toFixed(1)+'" y="'+(y+dy).toFixed(1)+'" font-size="10.5" font-weight="700" fill="'+col+'" text-anchor="middle">'+v+'</text>';
-    }
-    function lineFor(v1,v2,col,labelCol,dy){
-      var g='', y0=yAt(0);
-      g+=dot(x0,y0,col); // 0 셋팅 지점은 항상 표시
-      if(v1!==null){
-        var y1=yAt(v1);
-        g+=seg(x0,y0,x1,y1,col)+dot(x1,y1,col)+label(x1,y1,v1,labelCol,dy);
-        if(v2!==null){
-          var y2=yAt(v2);
-          g+=seg(x1,y1,x2,y2,col)+dot(x2,y2,col)+label(x2,y2,v2,labelCol,dy);
-        }
+    function lineFor(cs,col,labelCol,dy){
+      if(!cs) return '';
+      var pts=[],g='';
+      for(var i=0;i<=cs.last+1;i++) pts.push(xAt(i).toFixed(1)+','+yAt(cs.d.cum[i]).toFixed(1));
+      g+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
+      for(var i=0;i<=cs.last+1;i++){
+        var x=xAt(i),y=yAt(cs.d.cum[i]);
+        g+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#fff" stroke="'+col+'" stroke-width="1.6"/>';
+        if(i>0) g+='<text x="'+x.toFixed(1)+'" y="'+(y+dy).toFixed(1)+'" font-size="10" font-weight="700" fill="'+labelCol+'" text-anchor="middle">'+fmt(cs.d.cum[i])+'</text>';
       }
       return g;
     }
-
     var baseY=yAt(0);
     var svg='<svg width="100%" viewBox="0 0 '+W+' '+H+'">'+
-      '<line x1="'+xL+'" y1="'+baseY.toFixed(1)+'" x2="'+xR+'" y2="'+baseY.toFixed(1)+'" stroke="#C3C3C3" stroke-width="0.6"/>'+
+      '<line x1="'+padL+'" y1="'+baseY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+baseY.toFixed(1)+'" stroke="#C3C3C3" stroke-width="0.6"/>'+
       '<text x="12" y="'+(baseY+3).toFixed(1)+'" font-size="9" fill="#7C848C">0</text>';
-    svg+=lineFor(L1,L2,"#0B50F2","#0B50F2",-9);
-    svg+=lineFor(R1,R2,"#FAB416","#C88A00",17);
+    svg+=lineFor(c.L,"#0B50F2","#0B50F2",-9);
+    svg+=lineFor(c.R,"#FAB416","#C88A00",17);
+    var step=n>10?Math.ceil(n/8):1;
+    for(var i=0;i<=n;i+=step)
+      svg+='<text x="'+xAt(i).toFixed(1)+'" y="'+(H-8)+'" font-size="9" fill="#7C848C" text-anchor="middle">'+fmtLen(i*pitch)+'</text>';
     svg+='</svg>';
     var legend='<span class="chart-legend">'+
       '<span><span class="ln" style="border-top-color:#0B50F2"></span>L</span>'+
       '<span><span class="ln" style="border-top-color:#FAB416"></span>R</span>'+
       '</span>';
-    return '<div class="chart-title"><span class="nm">구배 형상 (μm)</span>'+legend+'</div>'+
+    return '<div class="chart-title"><span class="nm">구배 형상 · 누적 합 (μm)</span>'+legend+'</div>'+
       '<div class="chart-wrap">'+svg+'</div>';
+  }
+  function heResultHTML(part){
+    var spec=getHESpec(CUR.vendor,CUR.model);
+    if(!spec||!HE_SETUP) return '';
+    var s1=spec.sections[1], any=false, rows='';
+    ['L','R'].forEach(function(s){
+      var cs=heSideCalc(part,s); if(cs) any=true;
+      var tg=s==='L'?s1.L:s1.R;
+      rows+='<div class="h">'+s+'</div>'+
+        '<div class="v">'+(cs?fmt(cs.cum):'—')+'<small>μm · 목표 '+fmtHE(tg)+'</small></div>'+
+        '<div class="v">'+(cs?fmt(cs.str):'—')+'<small>μm</small></div>';
+    });
+    if(!any) return '';
+    return '<div class="he-res"><div></div><div class="h">구배 (누적 합)</div><div class="h">진직 (양 끝 직선 제외 폭)</div>'+rows+'</div>';
   }
   function renderHEChart(part){
     var el=document.getElementById('he-charts');
     if(el) el.innerHTML=heDrawChart(part);
+    var rs=document.getElementById('he-result');
+    if(rs) rs.innerHTML=heResultHTML(part);
   }
-
   document.getElementById('he-file').addEventListener('click',function(){ sendHEReport(HE_CURRENT_PART); });
 
   function sendHEReport(part){
@@ -2216,12 +2294,17 @@
       L.push("[SELFDIAG v3]");
       L.push(["META",CUR.vendor,CUR.model,unitKey,who,stamp(now)].join(","));
       L.push(["PART",part,mark].join(","));
-      if(st.enteredL[0]||st.enteredL[1]){
-        L.push(["HE","L","0",fieldOf(st.L,st.enteredL,0),fieldOf(st.L,st.enteredL,1)].join(","));
+      // HE 줄: 구간 수만큼의 값 (미입력 칸은 빈 값). 선행 0을 따로 붙이지 않는다. 값은 입력 그대로의 μm.
+      var cfg=st.cfg||{res:"0.02/m",lv:0,pitch:0,n:st.L.length};
+      function sideLine(side,arr,entered){
+        var f=[]; for(var i=0;i<cfg.n;i++) f.push(fieldOf(arr,entered,i));
+        return ["HE",side].concat(f).join(",");
       }
-      if(st.enteredR[0]||st.enteredR[1]){
-        L.push(["HE","R","0",fieldOf(st.R,st.enteredR,0),fieldOf(st.R,st.enteredR,1)].join(","));
-      }
+      var anyIn=st.enteredL.some(Boolean)||st.enteredR.some(Boolean);
+      if(st.enteredL.some(Boolean)) L.push(sideLine("L",st.L,st.enteredL));
+      if(st.enteredR.some(Boolean)) L.push(sideLine("R",st.R,st.enteredR));
+      // 신규 줄: HE 측정 설정 (분해능/수준기 길이/구간 간격/총 길이/구간 수) — STRAIGHTCFG와 같은 순서
+      if(anyIn) L.push(["HECFG",part,cfg.res,cfg.lv,cfg.pitch,cfg.pitch*cfg.n,cfg.n].join(","));
       L.push(["REF","HE",s0.name,s0.distStart,s0.distEnd,s0.L,s0.R].join(","));
       L.push(["REF","HE",s1.name,s1.distStart,s1.distEnd,s1.L,s1.R].join(","));
       L.push("[END]");
