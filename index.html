@@ -1,0 +1,2391 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base 공정 Self 진단</title>
+<style>
+  :root{
+    --navy:#001230;--blue:#0B50F2;--blue-soft:#E8EFFE;--sky:#73CAF1;
+    --green:#2F9E44;--green-soft:#E9F6ED;--amber:#FAB416;
+    --red:#E24B4A;--red-soft:#FCEDEC;
+    --gray:#7C848C;--lgray:#C3C3C3;--dgray:#3C3C3C;
+    --paper:#F4F6F9;--card:#fff;--line:#E6E9EF;
+    --r:14px;--r-sm:9px;--shadow:0 1px 3px rgba(0,18,48,.05),0 1px 2px rgba(0,18,48,.04);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;
+    background:var(--paper);color:var(--navy);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5;}
+  .wrap{max-width:440px;margin:0 auto;min-height:100vh;background:var(--paper);display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,18,48,.06);}
+
+  /* ===== 시작 화면 ===== */
+  #screen-start{flex:1;display:flex;flex-direction:column;background:var(--navy);color:#fff;padding:0 24px 32px;}
+  .start-top{flex:0 0 auto;padding:40px 0 0;text-align:center;}
+  .logo-img{width:150px;height:auto;display:block;margin:0 auto 24px;}
+  .start-title{font-size:22px;font-weight:800;letter-spacing:-.8px;line-height:1.3;}
+  .start-sub{font-size:12.5px;opacity:.55;margin-top:7px;}
+  .start-body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:22px 0;min-height:0;}
+  .recent-t{font-size:11px;font-weight:700;opacity:.5;letter-spacing:.3px;}
+  .recent-list{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow-y:auto;}
+  .recent-item{display:flex;flex-direction:column;gap:5px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:11px 14px;cursor:pointer;
+    transition:.15s;font-family:inherit;color:#fff;text-align:left;width:100%;}
+  .recent-item:active{background:rgba(255,255,255,.16);}
+  .recent-item .rl-main{display:flex;align-items:baseline;gap:8px;}
+  .recent-item .rl-val{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+  .recent-item .rl-time{font-size:11px;opacity:.5;flex-shrink:0;}
+  .recent-item .rl-parts{display:flex;gap:6px;}
+  .recent-item .rl-part{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.1);opacity:.5;}
+  .recent-item .rl-part.done{opacity:1;background:rgba(46,158,68,.35);}
+  .btn-start{width:100%;padding:16px;border:none;border-radius:12px;background:var(--blue);color:#fff;
+    font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;transition:.1s;}
+  .btn-start:active{transform:scale(.985);}
+  .start-foot{flex:0 0 auto;font-size:11px;opacity:.35;text-align:center;padding-top:10px;}
+
+  /* ===== 메인 화면 ===== */
+  #screen-main{display:none;flex-direction:column;flex:1;}
+  #screen-main.on{display:flex;}
+  .mhead{background:var(--navy);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:11px;}
+  .back{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.1);border:none;color:#fff;
+    font-size:16px;cursor:pointer;flex-shrink:0;font-family:inherit;line-height:1;}
+  .back:active{background:rgba(255,255,255,.2);}
+  .mhead .ctx{flex:1;min-width:0;}
+  .mhead .cm{font-size:10px;opacity:.5;font-weight:700;letter-spacing:.4px;}
+  .mhead .cv{font-size:16px;font-weight:800;letter-spacing:-.3px;margin-top:1px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mhead select option{color:#111;}
+  .sheet-warn{background:#FEF6E4;color:#8A6000;font-size:12px;font-weight:700;text-align:center;
+    padding:8px 12px;}
+
+  .scroll{flex:1;overflow-y:auto;padding:16px 16px 110px;}
+  .panel{display:none;} .panel.on{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:12px;}
+  .card.info{padding:12px 14px;}
+  .card-h{display:flex;align-items:center;gap:7px;margin-bottom:14px;}
+  .card-h .dot{width:4px;height:15px;background:var(--blue);border-radius:2px;}
+  .card-h h2{font-size:15px;font-weight:700;margin:0;color:var(--dgray);}
+  .card-h .tag{margin-left:auto;font-size:12px;color:var(--gray);background:var(--paper);padding:3px 9px;border-radius:20px;font-weight:600;}
+
+  .card.info .info-summary{display:none;flex-direction:column;gap:4px;}
+  .card.info.collapsed .info-form{display:none;}
+  .card.info.collapsed .info-summary{display:flex;}
+  .sum-main{display:flex;align-items:center;gap:8px;}
+  .sum-txt{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--navy);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sum-edit{flex-shrink:0;background:var(--paper);border:none;border-radius:6px;padding:5px 11px;
+    font-size:12.5px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;}
+  .sum-edit:active{background:var(--blue-soft);}
+  .sum-ref{font-size:11px;color:var(--gray);font-weight:600;}
+
+  label.f{font-size:12px;color:var(--gray);font-weight:600;display:block;margin-bottom:3px;}
+  .req{color:var(--blue);}
+  input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  input[type=text],input[type=number]{width:100%;min-width:0;border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:9px 10px;font-size:16px;color:var(--navy);background:var(--card);font-family:inherit;transition:.15s;}
+  input::placeholder{color:var(--lgray);}
+  input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
+  .info-grid5{display:grid;gap:8px;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas:"vendor model model" "unit unit who";}
+  .info-grid5 .f-vendor{grid-area:vendor;} .info-grid5 .f-model{grid-area:model;}
+  .info-grid5 .f-unit{grid-area:unit;} .info-grid5 .f-who{grid-area:who;}
+  select.model-sel{width:100%;min-width:0;border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 6px;
+    font-size:14px;font-weight:600;color:var(--navy);background:var(--card);font-family:inherit;}
+  select.model-sel:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
+
+  /* 품목 카드 목록 */
+  /* minmax(0,1fr) — 트랙이 내용(배지 등)의 최소 크기 때문에 넓어져 페이지 전체가 가로로
+     밀리는 것을 막는다. 폭이 정 부족하면 1열로 떨어지는 것도 허용(안전판). */
+  .card-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:10px;}
+  .item-card{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;font-family:inherit;
+    box-shadow:var(--shadow);transition:.1s;min-width:0;}
+  .item-card:active{transform:scale(.98);}
+  .item-card.wide{grid-column:1 / -1;}
+  .item-card[hidden]{display:none;}
+  .item-card.just-saved{border-color:var(--green);animation:justSaved 1.1s ease-out 2;}
+  @keyframes justSaved{
+    0%{box-shadow:0 0 0 0 rgba(46,158,68,.55);}
+    70%{box-shadow:0 0 0 11px rgba(46,158,68,0);}
+    100%{box-shadow:0 0 0 0 rgba(46,158,68,0);}
+  }
+  /* 제목+배지 2개가 한 줄에 안 들어가면 가로로 밀지 않고 배지를 다음 줄로 줄바꿈한다 */
+  .item-card-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;row-gap:4px;}
+  .item-card-name{font-size:15px;font-weight:800;color:var(--navy);flex:1 1 auto;min-width:60px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .item-card-method{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;
+    background:var(--blue-soft);color:var(--blue);white-space:nowrap;flex-shrink:0;}
+  .item-card-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;
+    background:var(--paper);color:var(--gray);white-space:nowrap;flex-shrink:0;}
+  @media (max-width:360px){
+    .card-grid{grid-template-columns:1fr;}
+  }
+  .item-card-badge.done{background:var(--green-soft);color:var(--green);}
+  .item-card-ref{font-size:11.5px;color:var(--gray);font-weight:600;}
+  .goto-straight{width:100%;padding:13px;background:var(--card);border:1px dashed var(--lgray);border-radius:var(--r-sm);
+    font-size:13.5px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;margin-top:2px;}
+
+  .part-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .part-back{width:28px;height:28px;border-radius:8px;background:var(--paper);border:none;color:var(--dgray);
+    font-size:15px;cursor:pointer;flex-shrink:0;font-family:inherit;line-height:1;}
+  .part-back:active{background:var(--line);}
+  .part-head h2{font-size:16px;font-weight:800;margin:0;color:var(--navy);}
+
+  .refbar{display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:var(--r-sm);
+    padding:9px 11px;margin-top:9px;font-size:12.5px;color:var(--gray);font-weight:600;}
+  .refbar .rk{color:var(--dgray);font-weight:700;}
+  .refbar .rv{margin-left:auto;font-weight:800;color:var(--navy);font-size:14.5px;letter-spacing:-.2px;}
+
+  .switch{display:flex;background:var(--paper);border-radius:8px;padding:2px;gap:2px;}
+  .switch .opt{flex:1;text-align:center;padding:7px 4px;font-size:13.5px;font-weight:600;color:var(--gray);
+    border-radius:6px;cursor:pointer;transition:.15s;}
+  .switch .opt.on{background:var(--blue);color:#fff;}
+  .switch.phase .opt.on.after{background:var(--red);}
+
+  /* 조립 전/후 탭을 좌측 세로로, 입력 영역을 우측에 — 입력칸 폭 확보가 우선이라 탭 폭은 내용 크기만큼만 */
+  .msmt-body{display:flex;gap:8px;align-items:stretch;}
+  .msmt-right{flex:1;min-width:0;}
+  .switch.vertical{flex:0 0 auto;flex-direction:column;gap:3px;}
+  .switch.vertical .opt{flex:1;display:flex;align-items:center;justify-content:center;
+    white-space:nowrap;padding:0 10px;font-size:13px;}
+
+  .seg-lab{font-size:10px;color:var(--lgray);font-weight:600;margin:0 0 10px;opacity:.9;}
+  .seg-lab-r{text-align:right;}
+  .seg-row{display:flex;gap:8px;margin-bottom:4px;}
+  .seg-cell{flex:1;}
+  .seg-cell .cl{font-size:10.5px;color:var(--gray);text-align:center;margin-bottom:4px;font-weight:600;}
+  .seg-cell input{text-align:center;padding:11px 2px;font-size:16px;font-weight:700;}
+
+  /* 축 한 줄 표시 (R/L, X/Y) — 줄 전체 폭을 그리드로 나눠 배분, 입력칸이 남는 공간을 채움.
+     minmax(0,1fr) — 좁은 폰 폭에서 입력칸이 내용 때문에 트랙보다 넓어져 페이지가 가로로
+     밀리지 않도록 함. 폭이 부족하면 라벨 폭·칸 간격을 먼저 줄이고, 글자 크기는 그대로 둔다. */
+  .axis-block{display:grid;grid-template-columns:16px 13px minmax(0,1fr) 13px minmax(0,1fr);
+    column-gap:5px;align-items:center;margin-bottom:5px;}
+  .axis-block:last-child{margin-bottom:0;}
+  .axis-lab{font-size:14px;font-weight:800;color:var(--dgray);text-align:center;}
+  .mcell-lab{font-size:12.5px;color:var(--gray);font-weight:700;text-align:center;}
+  .mcell{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  /* 입력칸 + ±버튼을 한 줄에 (버튼이 늘어도 minmax(0,1fr) 트랙 밖으로 밀지 않도록 min-width:0 유지) */
+  .mcell-row{display:flex;gap:3px;min-width:0;}
+  .mcell input{width:100%;height:40px;box-sizing:border-box;text-align:center;font-size:18px;font-weight:700;
+    border:1px solid var(--line);border-radius:var(--r-sm);padding:0 2px;background:var(--card);
+    color:var(--navy);font-family:inherit;transition:.15s;min-width:0;flex:1;}
+  .mcell input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
+  .mcell input.neg{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+  .ref-before{font-size:9px;color:var(--lgray);font-weight:600;text-align:center;white-space:nowrap;}
+  .na-notice{font-size:12.5px;color:var(--gray);line-height:1.6;background:var(--paper);
+    border-radius:var(--r-sm);padding:12px;text-align:center;}
+
+  /* ±(부호 전환) 버튼 — 폰 숫자 키패드에 "-" 키가 없는 것 대응. 판정이 아니라 단순 표시. */
+  .signbtn{flex:0 0 28px;width:28px;height:40px;box-sizing:border-box;border:1px solid var(--line);
+    border-radius:var(--r-sm);background:var(--paper);color:var(--gray);font-size:16px;font-weight:800;
+    font-family:inherit;cursor:pointer;padding:0;line-height:1;}
+  .signbtn:active{background:var(--blue-soft);}
+  .signbtn.neg{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+  /* ===== HE 라인 전용 위젯 (VMCT의 axis-block/mcell과 별개 — 겸용하지 않음) ===== */
+  .he-distbar{margin-top:9px;background:var(--paper);border-radius:var(--r-sm);padding:9px 11px;
+    font-size:11.5px;color:var(--gray);font-weight:600;text-align:center;}
+  .he-grid{display:grid;grid-template-columns:18px repeat(3,minmax(0,1fr));gap:4px;align-items:center;}
+  .he-pt-head{font-size:9.5px;color:var(--gray);font-weight:700;text-align:center;}
+  .he-rowlabel{font-size:14px;font-weight:800;color:var(--dgray);text-align:center;}
+  .he-fixed{height:40px;display:flex;align-items:center;justify-content:center;background:var(--paper);
+    border-radius:var(--r-sm);font-weight:800;color:var(--lgray);font-size:15px;}
+  .he-cell{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .he-cell-row{display:flex;gap:3px;min-width:0;}
+  .he-cell input{width:100%;height:40px;box-sizing:border-box;text-align:center;font-size:17px;font-weight:700;
+    border:1px solid var(--line);border-radius:var(--r-sm);padding:0 2px;background:var(--card);
+    color:var(--navy);font-family:inherit;transition:.15s;min-width:0;flex:1;}
+  .he-cell input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
+  .he-cell input.neg{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+  .he-target{font-size:9px;color:var(--gray);font-weight:600;text-align:center;white-space:nowrap;}
+
+  .divider{height:1px;background:var(--line);margin:16px 0;}
+  .chart-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding:0 2px;}
+  .chart-title .nm{font-size:13px;font-weight:700;color:var(--dgray);}
+  .chart-legend{display:flex;gap:9px;font-size:10.5px;font-weight:600;}
+  .chart-legend span{display:flex;align-items:center;gap:4px;color:var(--gray);}
+  .ln{display:inline-block;width:14px;height:0;border-top-width:2.5px;border-top-style:solid;}
+  .ln.dash{border-top-style:dashed;}
+  .chart-wrap{background:var(--paper);border-radius:var(--r-sm);padding:10px 8px 2px;}
+  .axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--gray);padding:2px 18px 0;font-weight:600;}
+
+  .notice{display:flex;gap:9px;align-items:flex-start;background:var(--blue-soft);border-radius:var(--r-sm);
+    padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.6;color:var(--dgray);}
+  .notice .nic{width:19px;height:19px;border-radius:50%;background:var(--blue);color:#fff;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-top:1px;}
+  .notice b{font-weight:800;color:var(--blue);}
+  .notice b.neg{color:var(--red);}
+
+  .seg-scroll{overflow-x:auto;padding-bottom:4px;}
+  .seg-scroll .seg-row{flex-wrap:nowrap;}
+  .seg-cell.wide{flex:0 0 92px;}
+  .seg-cell.wide .cl{font-size:9.5px;}
+  .sgn-row{display:flex;gap:3px;}
+  .sgn{flex:0 0 26px;border:1px solid var(--line);border-radius:7px;background:var(--paper);
+    color:var(--gray);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;padding:0;}
+  .sgn.neg{border-color:var(--red);color:var(--red);background:var(--red-soft);}
+  .sgn-row input{flex:1;min-width:0;}
+  .sgn-row input.neg{color:var(--red);}
+
+  .tbl-t{font-size:12.5px;font-weight:700;color:var(--gray);margin:14px 0 7px;}
+  .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);}
+  table.ctab{border-collapse:collapse;width:100%;min-width:420px;}
+  table.ctab th{font-size:10.5px;font-weight:700;color:#fff;background:var(--navy);padding:8px 6px;white-space:nowrap;}
+  table.ctab td{font-size:12px;text-align:right;padding:7px 8px;border-top:1px solid var(--line);white-space:nowrap;font-weight:600;}
+  table.ctab td:first-child,table.ctab td:nth-child(2){text-align:center;color:var(--gray);}
+  table.ctab td.hh{font-weight:800;}
+  table.ctab tr.base td{color:var(--lgray);background:var(--paper);}
+  table.ctab tr.ext td{color:var(--red);font-weight:800;}
+
+  .mrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;margin-top:10px;}
+  .mblk{background:var(--paper);border-radius:11px;padding:7px 7px 6px;text-align:center;}
+  .mblk .mn{font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px;letter-spacing:-.2px;}
+  .mblk .mvs{display:flex;gap:4px;justify-content:center;}
+  .mblk .mv{flex:1;background:var(--card);border-radius:7px;padding:4px 2px 5px;}
+  .mblk .mv i{font-style:normal;display:block;font-size:9.5px;color:var(--lgray);font-weight:700;margin-bottom:1px;}
+  .mblk .mv b{font-size:19px;font-weight:800;letter-spacing:-.5px;}
+  .mblk.tw{background:var(--red-soft);}
+  .mblk.tw .mn{color:#A32D2D;}
+  .mblk.tw .mv b{color:var(--red);}
+
+  .gridpos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:7px;}
+  .gcell{background:var(--paper);border-radius:9px;padding:7px 5px 6px;text-align:center;}
+  .gcell.center{background:var(--blue-soft);}
+  .gcell .gl{font-size:9.5px;color:var(--gray);font-weight:700;margin-bottom:4px;}
+  .gcell.center .gl{color:var(--blue);}
+  .gxy{display:flex;gap:6px;align-items:flex-start;}
+  .gxy .u{display:flex;flex-direction:column;gap:2px;}
+  .gxy .u>b{font-size:9px;font-weight:800;color:var(--lgray);line-height:1;}
+  .gxy .u.ux{flex:1;min-width:0;}
+  .gxy .u.ux>b{padding-left:2px;}
+  .gxy .u.uy{flex:0 0 38px;}
+  .gxy .u.uy>b{text-align:center;}
+  .inrow{display:flex;gap:3px;align-items:center;}
+  .incol{display:flex;flex-direction:column;gap:3px;}
+  .incol .dirbtn{width:100%;height:26px;flex:none;}
+  .incol input{padding:9px 1px;}
+  .dirbtn{flex:0 0 32px;height:34px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);
+    color:var(--gray);font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;padding:0;line-height:1;
+    transition:.12s;}
+  .dirbtn.set{border-color:var(--blue);color:#fff;background:var(--blue);box-shadow:0 2px 6px rgba(11,80,242,.35);}
+  .dirbtn.zero{color:var(--lgray);background:var(--paper);border-color:var(--line);cursor:default;}
+  .dirbtn.need{border-color:var(--amber);color:#8A6000;background:#FEF6E4;animation:blink 1.1s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.45;}}
+  .gcell input{width:100%;min-width:0;text-align:center;padding:7px 1px;font-size:14px;font-weight:800;
+    border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--navy);font-family:inherit;}
+  .gcell input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
+  .lvmax{display:flex;gap:8px;margin-top:12px;}
+  .lvmax .b{flex:1;background:var(--paper);border-radius:9px;padding:9px 11px;}
+  .lvmax .b .l{font-size:11px;color:var(--gray);font-weight:700;}
+  .lvmax .b .v{font-size:19px;font-weight:800;margin-top:1px;letter-spacing:-.4px;}
+  .modal{position:fixed;inset:0;background:rgba(0,18,48,.5);display:none;align-items:flex-end;
+    justify-content:center;z-index:100;}
+  .modal.on{display:flex;}
+  .msheet{width:100%;max-width:440px;background:var(--card);border-radius:20px 20px 0 0;
+    max-height:88vh;display:flex;flex-direction:column;animation:up .22s ease;}
+  @keyframes up{from{transform:translateY(30px);opacity:.6;}to{transform:none;opacity:1;}}
+  .mtop{display:flex;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--line);}
+  .mtitle{flex:1;font-size:16px;font-weight:800;color:var(--navy);}
+  .mclose{background:none;border:none;font-size:24px;color:var(--gray);cursor:pointer;line-height:1;padding:0 2px;}
+  .mbody{flex:1;overflow-y:auto;padding:14px 18px 4px;}
+  .mfoot{display:flex;gap:8px;padding:12px 18px 18px;border-top:1px solid var(--line);}
+  .mfoot .btn{flex:1;}
+  .btn-ghost2{background:var(--paper);color:var(--dgray);}
+  .vhead{display:flex;gap:11px;align-items:center;padding:13px 14px;border-radius:var(--r);background:var(--paper);}
+  .vhead .vic{width:30px;height:30px;border-radius:50%;background:var(--lgray);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:16px;flex-shrink:0;font-weight:800;}
+  .vhead .va{font-size:15px;font-weight:800;color:var(--dgray);}
+  .vhead .vb{font-size:12.5px;margin-top:2px;color:var(--gray);}
+  .vhead.ok{background:var(--green-soft);} .vhead.ok .vic{background:var(--green);}
+  .vhead.ok .va{color:#1B6B2E;} .vhead.ok .vb{color:#3C8A4E;}
+  .vhead.warn{background:var(--red-soft);} .vhead.warn .vic{background:var(--red);}
+  .vhead.warn .va{color:#A32D2D;} .vhead.warn .vb{color:#B4534F;}
+  .vmeta{font-size:12.5px;color:var(--gray);font-weight:600;margin:12px 2px 8px;}
+  .vref-warn{font-size:12px;font-weight:700;color:#8A6000;background:#FEF6E4;border-radius:8px;
+    padding:8px 10px;margin:-2px 2px 10px;}
+  .vrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+    background:var(--paper);margin-bottom:7px;}
+  .vrow .rn{flex:1;font-size:13px;font-weight:700;color:var(--dgray);}
+  .vrow .rv{font-size:17px;font-weight:800;letter-spacing:-.3px;}
+  .vrow .rr{font-size:10.5px;color:var(--gray);font-weight:600;margin-left:8px;}
+  .vrow .rbadge{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:20px;margin-left:8px;}
+  .vrow.ok .rbadge{background:var(--green-soft);color:var(--green);}
+  .vrow.out{background:var(--red-soft);}
+  .vrow.out .rn{color:#A32D2D;} .vrow.out .rv{color:var(--red);}
+  .vrow.out .rbadge{background:var(--red);color:#fff;}
+  .vrow.na .rv{color:var(--lgray);}
+  .predbox{margin-top:12px;border-radius:12px;padding:13px 14px;background:var(--blue-soft);}
+  .predbox .pt{font-size:12px;font-weight:800;color:var(--blue);letter-spacing:.2px;margin-bottom:7px;}
+  .predbox .pmain{display:flex;align-items:baseline;gap:7px;}
+  .predbox .pv{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--navy);}
+  .predbox .pu{font-size:12.5px;color:var(--gray);font-weight:700;}
+  .predbox .pd{font-size:12.5px;line-height:1.6;margin-top:6px;color:#2E4879;}
+  .predbox .pd b{font-weight:800;}
+  .predbox.warn{background:var(--red-soft);}
+  .predbox.warn .pt{color:#A32D2D;} .predbox.warn .pv{color:var(--red);} .predbox.warn .pd{color:#B4534F;}
+  .predbox .pbar{height:8px;border-radius:4px;background:rgba(255,255,255,.7);margin-top:9px;position:relative;overflow:hidden;}
+  .predbox .pbar i{display:block;height:100%;border-radius:4px;background:var(--blue);}
+  .predbox.warn .pbar i{background:var(--red);}
+  .predbox .pscale{display:flex;justify-content:space-between;font-size:9.5px;color:var(--gray);font-weight:700;margin-top:3px;}
+  .vnote{font-size:11px;color:var(--gray);line-height:1.6;background:var(--paper);
+    border-radius:9px;padding:10px 12px;margin:10px 0 6px;}
+  .btn{width:100%;padding:13px;border:none;border-radius:var(--r-sm);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:.1s;}
+  .btn:active{transform:scale(.985);}
+  .btn-blue{background:var(--blue);color:#fff;}
+  .savebar{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:440px;
+    background:var(--card);border-top:1px solid var(--line);box-sizing:border-box;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    box-shadow:0 -2px 10px rgba(0,18,48,.06);z-index:20;}
+  .savebar .fillstat{font-size:11px;color:var(--gray);font-weight:600;text-align:center;margin-bottom:8px;}
+  .savebar .fillstat b{color:var(--blue);font-weight:800;}
+  .collapse-btn{width:100%;padding:13px;background:var(--card);border:1px dashed var(--lgray);border-radius:var(--r-sm);
+    font-size:14.5px;font-weight:700;color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;margin-bottom:12px;}
+  .collapse-btn .chev{transition:transform .2s;}
+  .collapse-btn.open .chev{transform:rotate(180deg);}
+  .collapse-body{display:none;} .collapse-body.open{display:block;animation:fade .2s;}
+
+  /* ===== 진단 패널 (개발용) — 평소엔 접힌 채로 화면 구석에만 작게 떠 있는다 ===== */
+  .diag-fab{position:fixed;right:10px;bottom:10px;z-index:80;background:rgba(0,18,48,.55);color:#fff;
+    border:none;border-radius:20px;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;
+    font-family:inherit;opacity:.5;}
+  .diag-fab:active{opacity:.9;}
+  .diag-panel{position:fixed;left:0;right:0;bottom:0;z-index:81;background:#0B1220;color:#D7E0EA;
+    max-height:60vh;overflow-y:auto;padding:14px 16px 20px;font-size:11.5px;line-height:1.55;
+    border-radius:14px 14px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.35);display:none;}
+  .diag-panel.open{display:block;}
+  .diag-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .diag-title{font-weight:800;font-size:12.5px;}
+  .diag-close{background:none;border:none;color:#D7E0EA;font-size:18px;cursor:pointer;line-height:1;
+    font-family:inherit;padding:0 4px;}
+  .diag-row{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);word-break:break-all;}
+  .diag-row:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== 시작 화면 ========== -->
+  <div id="screen-start">
+    <div class="start-top">
+      <img class="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARkAAAAiCAYAAABr2q3NAAANdklEQVR42u2dd5RV1RXGf3sYimDvxkaMxkawG2UZFY3BFsuyg7rUqEuNYouKiqgQDDZE0dh7WxqXGHvvvSFoMBixgB0zRFFhhmG+/HHPJM8757577n1v5r2H71tr1pp379mn7rPPPvvss69JMmBfoCe1gXfN7JVyZihpELBC7PErZvZuJRsqaQtgdUDAHWY2lzrqqDVIapQ0R7WDLyX9XdKKJba7m6StJd2X0P4PJN0habkKjct2kpoK6rNcnVvrqGUh851qD3MljZLUPUebF5V0r6TWgHLmSBrdxWOyrWtfO1olLVvn1jpqVciYpOGqTcyTtGrG9jZIuj9HWcMrpMHUhUwdC4ywOaFGBc1jGdq4jNtq5cXoTh6DbSU1e8qtC5k6FhhBc3oNCpmZkrYNbN/eZShveCf1/W8lzUoosy5k6qhZNBb+MLPRklqA82qoDUsD+0l60czmFJnE3YALylDeKEk9zeyMMgqY3wH3AAuVMc9FgP6AAScC6wKvAle4JNPM7PMM+W0K9ADWBI4EegMvArcBLcCHZvZpQD4rAX1jj6eYWVNgPdYDFil4NBuYbGZKSL+kq3O3gsdvm9k3jid+DTTk7OavzeyfrpzVgeVj7980sx9S2tMT2MT93BbYB2gG3gSud8+nm9n0gL7ZGOjlefWpmX2YkfZ7M5tYJP2awDLAVsBgYC4wFvgYmGtmr6dV9rQa1GhWT2nT7oGG3lCUU8i8k1JWJk1GUn9Jj6bk+aazxTWk5HWKpBsC+uMtSWMlrZuS3wgP7S4Z2jY5RjtZUmOR9LtKaovRbOPeLVYiD9xbUI6vj/qntGWIpHsCypkiaWRA33ySNNY5aKcWSfsXSZ+m2ErHSlqrgyZToNGcI6nNSdVKogewTmDakU6iJuGA2GpWKkZKajSzM8uQV3MZBdZo4AhgyZSkG7i/z4DrPPn0AsYDhwYWvZ7721fSIDN7OyHdPM+z+RmaODflty/vOU7zakdbezPdu7waZEvC//FyfFrABGCNpDkYw9rAGZKGACPN7MbAvvnfWEsaY2bDSulXt4DcAqwfsEM6HugvaVBiA81sDDCmwjai7sBFwEFAn5TkG6ZlF1DkxW7gdwys4ghJbWZ2dpXY1AYECph2XGNm1yW8uzZFaCdhBeBxSXuY2fM1sN3uXgJtY44x6gfcC/w8R3mrATdIajWzWzPS7izpajOblpO3GoAzAwRMOz4HjjWz+Y3VPPpmNg84WtISwH7OvpCEvpION7OrShAyl7qV/W8ZBM1ZkmRmIyssYJYC7vQImK+AacCzwPZu1f4l8K5jGp8t58IEATMTmOXsBZ8DWwCLuwlTyEvLAhMkDTSzd6qYxdpcP8S93ZcBlog9m+5Z3WdkHKOFgEeAn3lef+i0vBecnWmrgrGK4zpJn5rZ0xmKXxe4GRiQs68uAfbyaInTXJtWBdZyi0w7D02pGcuuc54LwVOSlk7I464A+g3atwqSHsm4Pz+7hPa9UapNRtLyHrr3nWoeTztM0sCEfPZIqMNfJa2TQLO/pBkempc9aU/1pNspQ1+9GqN9NcUms7Ok72M0W6eUcaGnjhum0FzloekXS3OIJ80sSZc4AeTL92RJLR66W+OOqG68i2G+pD0TyonTToq99/mWHe3JZ2tJP1q8Goow7EpVJGd+cDaXNGwdsG0K0aDmOql9fwayEV3lsFdEU4vbAB43s6m+rbCZPeUZ957A2R570SgzO8rMpiT01y3ATsAXsVf9JO1O7aGhHFujWN8uDZzkefV7MxuadDJqZucBp3peDXbaQ9Z2DU0z9ieg1fPsRk99n46bD5IKew6YIemkKtk2tTpD2UcByS8vU5nfAnsAD2cgGxVyCtCFWEdSjwzp+zm1uhATzWxEQH9Ndsa+QvQBBktamDr2cduJQjwCvBzQtxcCwzyLyGUppF+4eVOI3wBX5LmO48EmeSV2of3iXEnHVomgeQt4MsC20k1S7zKV2UJ0Q/2BDGRnSDqtEl3kGc9NgKclrSNpKXfjvhhO9PBBlqP6J4FnYs/2dDaOnzoaPZrBeLeAhuAyz/i2BewAjvDYRg6jY9SBPLLiJknHOt7qk1XIFDLuOEknV8lAHZegthViFWBE2Wau2TfA7sCDGchGV0CjmQPEQ2D0AjYHJhMZaq909pPFE/JY0iNk3sjQV18RGc6TFq2fJFx/x10BngAezbiIxJ3jeqRsfbq7MbnDt9Vx2+NQ3O55tiIwzvHWc5IOlbR5ViFDgUZzTBWM1/cem4FvMMoaG8edcg0GHsqo0ZzahZreN8BuwEs+7Y7oqPYwohOGhyQd7Enn81fpkbEq3agjjkXcVrQQsx1fhY7vbKITnkKsFGKXcSefcW18U2D3AO22PY/bi8y97kQ+V1cD90m63nlTZxIyAJdUkUZTie3aN8AuwH0ZyM6RNKoL6/gFMIjIue6TIkk3IzoGPao+/7tsK1sOzPcoCaFz+Hx+bJjv7RacxTLw11nAIUTuEElYisiv7V7nDpH5zsa5ko4OlX6dgD54fDs8qnlzJ03iViLP4SzG4OFdrNHMNrM/ADu7uo4v0h8XSzogRbNtKXEidPpuJOV9WxUImdkeu0ivLKc8zngeXxRmEN0VCuGLZ+hoL2sEhmWZz2Z2PZG/1T6uPlMT+nhH4FZJ3fIcZY13DFwJjCP9KHE6YcfdpWg0u+bQaLrURmNmk8zsFjMbSuT89SfgdQ+TDYhtR+Mr8EYZJsKy+B3NOnNR6pOS/xKV3sKZ2Swg7iQ6yE3WLNgs9rs5g+EY4Bg62thOITLOz87QnjlmdqeZXQ5s7P4ep+OVkYGANZQwsF27XEnrA9sEMOz8tJuvZWCaFmB/svnRVOrUCTNrcseg2wPvFNFUxnqEQ5bt3jZEnqqFuAv4uozNifPsKinazJp0tNFVQhNv9dgxhhZzJIzhjx6NoSEjH8xMWICPc/adPLz1nZlNNLPtgLifWHOe7VKoilpuAdNIdMLTNyD5kV00cb91K0DWU6ezuqC/koyBszwqcyFeJ3KzL8QGgTeA+xPdMyvEXOBOZ7QsF77zTLTVE+rUAKzs4d3WCgiZCcD7Hm1mw4C+HUJkdG3wCJ6seIzo7lQhBhCFTAnhrVWKvL4/ZFWoVvQm7Fj6KaJ7NV2lITQDe5PNj+bMzvQMljQUeMzFf4mjrxOM8S1ToYYWFyg9nRZ2rqTFEsoc6PogHk9lioehQ1b5YrjAo1U/GHfhL9DMDoo9exL4RwW0yc/wXzi+X9L5Ra4VnEB0qhTXxm4LtcfEtzpEF4FbcvDWWo63km5zD0viLV9m76Xcgdi1izWZmzwxQeJolnREkTyC7y7lqF9v99WDLBhRQP9qOeLJOMeo9pg5TZKmOuFwsIv3Mt0T9+OUWB4LS7omoR4fudg3Zzp/m4ddGd960jb5Yssk3F36xOWT9HdkAf0yLhpiHF9Jes3FDbrU0cXRFuLFLukiD+2mKTQhd5d6F4nD8oGLG3OUpL3ceE0twusDPXWI3z+aXqS+B6fwXPzu0i9i/PMvSc9K2l7SLa6u82N5TCw8ys4qZG7uIuHS3U2SpoBJ+15igzpZyLj8e+UIUD5e0hmSPgtIu1xK+cflCLr0ZtL2VNLdJQRzakoKRJUgZIIFsstjo8A+i+OhwLHsFCHj0vVzAqUUDEmoQxYh01fSpBAhI2l9SR/nqOeWxdWZ4tjf7cE7+3iwOx3v0iThXTMr9fg0t0HQzOZKGkwUh2XPQLKjA9M9CnybkmZl4D9EoRdC8DX+C3uYWaukA52N5dCMXfEFsL2ZTSojH8yP1e8NSVcCx9IxJEMSJhKdpFQUZvaOpB3IFrSqHR8Af84RS8ZXj48knUh0f6ohYB42OSN7qM32Cop5iwdoMtWINVJWmjRNplXSr8qgffXMsXVKw4GBZW9SZKtTiGvaQyMG5DlC0gOBAd0vSrCNxPPLirMS8tpI0oQU2k8knZ5xDC/15LNZCk3e8JshX8/IG35zZgDN1QllTo2l6yZpjNsyp4VhPTR15Zb0npOytYJrgWNSAonfRXSr2oc2ouO3i8rxKVhnIL2ajkF+8qAF2NfMJmQof4BbIU8g8nNpcMbDF9wq9nzG9vQmiojWAAwhcrTqThRoaRzR3ZWmpFAQsbx8gcTT8LGZzUgS6kR+Go3ucGBtIn+NccBrwFdm9l7G9q5GR3+fScVOyUoIJN7L1R8i/6v2rdBL/P+0Lm8g8WYzey3NJEEUTD0ObyDxgnZuCRwILEoUoL7dIP+BM3KnVraWNJmgT6IU0WTmOQt+ue1JPdxXKkvFHSXWwzrDQ7uCXt81Wa9Kj1cl+7uB2sdbZvZECXv94WY2thP23i1uVbqnhGxmA6NLrIeSPhdSar7VyAzVWq9Kj1cl+3tBEDKH56RrBo43s3M7cQBmE/nR3J6D/EtgBxcMqo46ahZJQqZHDdS9mege1Wc5aOcBp5vZ+C6Q9POIbq7uSmShD8G/gd3M7IU6i9axQCLhzL9a0OQs8itmbFO7D0tLpWLjSFrPnYa8mNC25ySdWA9XWceChKTTpW5EAZAWqcI6TzOz53JM8IFEAX5mmtkDlWyAC1UYP3lqAe4ux+lWHXVUE/4L0GCuE6e6+cAAAAAASUVORK5CYII=" alt="DN SOLUTIONS">
+      <div class="start-title">Base 공정 Self 진단</div>
+      <div class="start-sub">대물 가공 정밀도 관리 시스템</div>
+    </div>
+
+    <div class="start-body">
+      <div id="recent-wrap" style="display:none">
+        <div class="recent-t">최근 기록 · 눌러서 이어가기</div>
+        <div class="recent-list" id="recent-list" style="margin-top:8px"></div>
+      </div>
+      <button type="button" class="btn-start" id="btn-start">시작하기</button>
+    </div>
+
+    <div class="start-foot">폰에는 이름표만 남습니다 · 측정값은 시트가 원장입니다</div>
+  </div>
+
+  <!-- ========== 메인 화면 ========== -->
+  <div id="screen-main">
+    <div class="mhead">
+      <button class="back" id="btn-back">‹</button>
+      <div class="ctx">
+        <div class="cm">생산처 · 기종 · 호기</div>
+        <div class="cv" id="ctx-line">—</div>
+      </div>
+    </div>
+
+    <div class="sheet-warn" id="sheet-warn" style="display:none">⚠ 목표치 시트를 불러오지 못했습니다 (기본값 사용 중)</div>
+    <div class="sheet-warn" id="sheet-warn-he" style="display:none">⚠ HE 참고 구배 값 시트를 불러오지 못했습니다 (HE 기종 목표치 미반영)</div>
+
+    <div class="scroll">
+
+      <!-- ===== 카드 목록 화면 ===== -->
+      <div class="panel on" id="panel-cards">
+        <div class="card info" id="sel-infocard">
+          <div class="card-h"><span class="dot"></span><h2>대물 정보</h2></div>
+          <div class="info-form" id="sel-info-form">
+            <div class="info-grid5">
+              <div class="f-vendor"><label class="f">생산처</label><select class="model-sel" id="sel-vendor"></select></div>
+              <div class="f-model"><label class="f">기종</label><select class="model-sel" id="sel-model"></select></div>
+              <div class="f-unit"><label class="f">호기</label><input type="text" id="sel-unit" placeholder="3호기 (미정 가능)"></div>
+              <div class="f-who"><label class="f">소사장 (측정자)</label><input type="text" id="sel-who" placeholder="이름"></div>
+            </div>
+          </div>
+          <div class="info-summary">
+            <div class="sum-main"><span class="sum-txt" id="sel-info-sumtxt"></span>
+              <button type="button" class="sum-edit" id="sel-info-edit">수정</button></div>
+          </div>
+        </div>
+
+        <div class="card-grid" id="item-cards">
+          <button type="button" class="item-card" data-part="SADDLE" id="card-SADDLE">
+            <div class="item-card-top"><span class="item-card-name">SADDLE</span><span class="item-card-method">수준기</span><span class="item-card-badge" id="badge-SADDLE">○ 미측정</span></div>
+            <div class="item-card-ref" id="cardref-SADDLE">목표치 —</div>
+          </button>
+          <button type="button" class="item-card" data-part="TABLE" id="card-TABLE">
+            <div class="item-card-top"><span class="item-card-name">TABLE</span><span class="item-card-method">수준기</span><span class="item-card-badge" id="badge-TABLE">○ 미측정</span></div>
+            <div class="item-card-ref" id="cardref-TABLE">목표치 —</div>
+          </button>
+          <button type="button" class="item-card" data-part="BED" id="card-BED">
+            <div class="item-card-top"><span class="item-card-name">BED</span><span class="item-card-method">수준기</span><span class="item-card-badge" id="badge-BED">○ 미측정</span></div>
+            <div class="item-card-ref" id="cardref-BED">목표치 —</div>
+          </button>
+          <button type="button" class="item-card wide" id="card-LEVEL">
+            <div class="item-card-top"><span class="item-card-name">이송레벨</span><span class="item-card-badge" id="badge-LEVEL">○ 미측정</span></div>
+            <div class="item-card-ref">대조립 정도조정 전 · 호기 기준</div>
+          </button>
+        </div>
+        <button type="button" class="goto-straight" id="goto-straight">진직도 계산기 (독립 사용)</button>
+      </div>
+
+      <!-- ===== SADDLE ===== -->
+      <div class="panel" id="panel-part-s">
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>SADDLE 측정</h2></div>
+        <div class="card info">
+          <label class="f">각인번호 <span class="req">*</span></label>
+          <input type="text" id="s-mark" placeholder="SDL-24-0731">
+          <div class="refbar"><span class="rk">SADDLE 구배 목표치</span><span class="rv" id="s-ref">—</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><span class="dot"></span><h2>측정 · 구배 값</h2></div>
+          <div id="s-msmt-active">
+            <div class="seg-lab seg-lab-r">수준기 값 (0.02/M)</div>
+            <div class="msmt-body">
+              <div class="switch phase vertical" id="s-phase-sw">
+                <div class="opt on" data-v="before">조립 전</div>
+                <div class="opt" data-v="after">조립 후</div>
+              </div>
+              <div class="msmt-right">
+                <div class="seg-list" id="s-segs"></div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div id="s-charts"></div>
+          </div>
+          <div class="na-notice" id="s-na-notice" style="display:none">이 기종은 SADDLE 목표치가 "해당 없음(X)"으로 등록되어 있어 측정을 진행하지 않습니다.</div>
+        </div>
+
+        <button class="collapse-btn" data-target="s-straight"><span>＋ 진직도 상세 계산</span><span class="chev">⌄</span></button>
+        <div class="collapse-body" id="s-straight-body"></div>
+        <div class="savebar" id="s-savebar">
+          <div class="fillstat" id="s-fillstat">0개 중 0개 입력됨</div>
+          <button class="btn btn-blue" id="s-file">저장 · 진단 결과 확인</button>
+        </div>
+      </div>
+
+      <!-- ===== TABLE ===== -->
+      <div class="panel" id="panel-part-t">
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>TABLE 측정</h2></div>
+        <div class="card info">
+          <label class="f">각인번호 <span class="req">*</span></label>
+          <input type="text" id="t-mark" placeholder="TBL-24-0731">
+          <div class="refbar"><span class="rk">TABLE 구배 목표치</span><span class="rv" id="t-ref">—</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><span class="dot"></span><h2>측정 · 진직 값</h2></div>
+          <div id="t-msmt-active">
+            <div class="seg-lab seg-lab-r">수준기 값 (0.02/M)</div>
+            <div class="msmt-body">
+              <div class="switch phase vertical" id="t-phase-sw">
+                <div class="opt on" data-v="before">조립 전</div>
+                <div class="opt" data-v="after">조립 후</div>
+              </div>
+              <div class="msmt-right">
+                <div class="seg-list" id="t-segs"></div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div id="t-charts"></div>
+          </div>
+          <div class="na-notice" id="t-na-notice" style="display:none">이 기종은 TABLE 목표치가 "해당 없음(X)"으로 등록되어 있어 측정을 진행하지 않습니다.</div>
+        </div>
+
+        <button class="collapse-btn" data-target="t-straight"><span>＋ 진직도 상세 계산</span><span class="chev">⌄</span></button>
+        <div class="collapse-body" id="t-straight-body"></div>
+        <div class="savebar" id="t-savebar">
+          <div class="fillstat" id="t-fillstat">0개 중 0개 입력됨</div>
+          <button class="btn btn-blue" id="t-file">저장 · 진단 결과 확인</button>
+        </div>
+      </div>
+
+      <!-- ===== BED ===== -->
+      <div class="panel" id="panel-part-b">
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>BED 측정</h2></div>
+        <div class="card info">
+          <label class="f">각인번호 <span class="req">*</span></label>
+          <input type="text" id="b-mark" placeholder="BED-24-0731">
+          <div class="refbar"><span class="rk">BED 구배 목표치</span><span class="rv" id="b-ref">—</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><span class="dot"></span><h2>측정 · 구배 값</h2></div>
+          <div id="b-msmt-active">
+            <div class="seg-lab seg-lab-r">수준기 값 (0.02/M)</div>
+            <div class="msmt-body">
+              <div class="switch phase vertical" id="b-phase-sw">
+                <div class="opt on" data-v="before">조립 전</div>
+                <div class="opt" data-v="after">조립 후</div>
+              </div>
+              <div class="msmt-right">
+                <div class="seg-list" id="b-segs"></div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div id="b-charts"></div>
+          </div>
+          <div class="na-notice" id="b-na-notice" style="display:none">이 기종은 BED 목표치가 "해당 없음(X)"으로 등록되어 있어 측정을 진행하지 않습니다.</div>
+        </div>
+
+        <button class="collapse-btn" data-target="b-straight"><span>＋ 진직도 상세 계산</span><span class="chev">⌄</span></button>
+        <div class="collapse-body" id="b-straight-body"></div>
+        <div class="savebar" id="b-savebar">
+          <div class="fillstat" id="b-fillstat">0개 중 0개 입력됨</div>
+          <button class="btn btn-blue" id="b-file">저장 · 진단 결과 확인</button>
+        </div>
+      </div>
+
+      <!-- ===== HE 라인 측정 (인디게이터, 3점) — VMCT와 별개 화면. 품목명은 openHEPart()가 채움 ===== -->
+      <div class="panel" id="panel-part-he">
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2 id="he-part-title">HE 측정</h2></div>
+        <div class="card info">
+          <label class="f">각인번호 <span class="req">*</span></label>
+          <input type="text" id="he-mark" placeholder="예: COL-24-0731">
+          <div class="he-distbar" id="he-dist-label">—</div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><span class="dot"></span><h2>측정 · 인디게이터 값 (μm)</h2></div>
+          <div class="seg-lab seg-lab-r">1번째는 0 셋팅 지점(고정) · 나머지 두 지점만 입력</div>
+          <div id="he-segs"></div>
+          <div class="divider"></div>
+          <div id="he-charts"></div>
+        </div>
+
+        <div class="savebar" id="he-savebar">
+          <div class="fillstat" id="he-fillstat">0개 중 0개 입력됨</div>
+          <button class="btn btn-blue" id="he-file">저장</button>
+        </div>
+      </div>
+
+      <!-- ===== 이송레벨 (대조립 정도조정 전) ===== -->
+      <div class="panel" id="panel-level">
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>이송레벨 측정</h2></div>
+        <div class="card">
+          <div class="card-h"><span class="dot"></span><h2>이송레벨 측정</h2></div>
+          <div class="notice"><span class="nic">!</span>
+            <div>측정 후 <b>물방울이 이동한 방향</b>으로 화살표를 선택하고 값을 입력하세요.</div>
+          </div>
+          <div class="gridpos" id="v-grid"></div>
+          <div id="v-view"></div>
+        </div>
+
+        <div class="savebar" id="v-savebar">
+          <button class="btn btn-blue" id="v-file">저장 · 조정 전 값 저장</button>
+        </div>
+      </div>
+
+      <!-- ===== 진직도 (독립 사용) ===== -->
+      <div class="panel" id="panel-straight">
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>진직도 계산기</h2></div>
+        <div class="card info">
+          <div class="card-h"><span class="dot"></span><h2>진직도 계산기</h2><span class="tag">독립 사용</span></div>
+          <div><label class="f">각인번호 / 측정 대상</label><input type="text" id="i-mark" placeholder="대물 각인번호 또는 측정 위치"></div>
+        </div>
+        <div id="i-tool"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<button type="button" class="diag-fab" id="diag-fab">진단</button>
+<div class="diag-panel" id="diag-panel">
+  <div class="diag-head"><span class="diag-title">진단 정보 (개발용)</span><button type="button" class="diag-close" id="diag-close">×</button></div>
+  <div id="diag-body"></div>
+</div>
+
+<div class="modal" id="verify-modal">
+  <div class="msheet">
+    <div class="mtop">
+      <div class="mtitle">저장 전 진단 결과</div>
+      <button class="mclose" id="v-close">×</button>
+    </div>
+    <div class="mbody">
+      <div class="vhead" id="v-head">
+        <div class="vic" id="v-ic">✓</div>
+        <div><div class="va" id="v-va">—</div><div class="vb" id="v-vb">—</div></div>
+      </div>
+      <div class="vmeta" id="v-meta"></div>
+      <div class="vref-warn" id="v-refwarn" style="display:none">⚠ 목표치 미등록 — 구배 목표치 비교 없이 측정값만 저장됩니다.</div>
+      <div class="vlist" id="v-list"></div>
+      <div class="predbox" id="v-pred"></div>
+      <div class="vnote">축적 데이터 분포와 비교한 참고 결과입니다. 합격·불합격 판정이 아니며,
+        범위를 벗어난 항목은 관리자 확인 후 진행하세요.</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost2" id="v-cancel">수정</button>
+      <button class="btn btn-blue" id="v-send">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     생산처 × 기종 구배 기준 마스터
+     ※ 사진 표를 옮긴 것 — 값 검증 필요
+     형식: [좌/전면, 중앙, 우/후면]
+     ========================================================= */
+  var MASTER = {
+    "아성":{
+      "Mynx5400"  :{BED:["10~20","0","10~20"],SADDLE:["10~20","0","10~20"],TABLE:["10~20","0","10~20"],sq:"0.01/300mm"},
+      "Mynx6500"  :{BED:["10~20","0","10~20"],SADDLE:["20~30","0","20~30"],TABLE:["10~20","0","10~20"],sq:"0.01/300mm"},
+      "VM5400"    :{BED:["10~20","0","10~20"],SADDLE:["20~30","0","20~30"],TABLE:["10~20","0","10~20"],sq:"0.01/300mm"},
+      "VM6500"    :{BED:["10~20","0","10~20"],SADDLE:["30~40","0","30~40"],TABLE:["10~20","0","10~20"],sq:"0.01/300mm"},
+      "DNM6700XL" :{BED:["0","0","50~60"],SADDLE:["40~50","0","40~50"],TABLE:["30~40","0","30~40"],sq:"0.01/250mm"},
+      "DNM750"    :{BED:["0","0","50~60"],SADDLE:["70~80","0","70~80"],TABLE:["30~40","0","30~40"],sq:"0.01/250mm"},
+      "DNM750L"   :{BED:["0","0","50~60"],SADDLE:["50~60","0","50~60"],TABLE:["30~40","0","30~40"],sq:"0.01/250mm"}
+    },
+    "삼광":{
+      "Mynx5400"  :{BED:["10","0","10"],SADDLE:["20","0","20"],TABLE:["10","0","10"],sq:"-30"},
+      "DNM5700"   :{BED:["10","0","10"],SADDLE:["30","0","30"],TABLE:["10","0","10"],sq:"-30"},
+      "DNM6700"   :{BED:["20","0","20"],SADDLE:["60","0","60"],TABLE:["10","0","10"],sq:"-30",note:"20.7월 새들 구배 재조정"},
+      "DNM4000"   :{BED:["10","0","10"],SADDLE:["15","0","15"],TABLE:["5","0","5"],sq:"-30"},
+      "DVM650"    :{BED:["10","0","10"],SADDLE:["50","0","50"],TABLE:["10","0","10"],sq:"-30"}
+    },
+    "서진":{
+      "Mynx6500"  :{BED:["10","0","10"],SADDLE:["30","0","30"],TABLE:["10","0","10"],sq:"0.04(뒤)",note:"연마기준"},
+      "Mynx7500"  :{BED:["10","0","10"],SADDLE:["40","0","40"],TABLE:["10","0","10"],sq:"0.04",note:"연마기준"},
+      "DNM4500"   :{BED:["20","0","20"],SADDLE:["20","0","20"],TABLE:["0","0","0"],sq:""},
+      "T4000"     :{BED:["10","0","10"],SADDLE:["20","0","20"],TABLE:["0","0","0"],sq:"",note:"20.11.10 새들 구배 협의"},
+      "T4000L"    :{BED:["10","0","10"],SADDLE:["10","0","10"],TABLE:["0","0","0"],sq:""}
+    },
+    "대영":{
+      "DNM4500"   :{BED:["0","0","0"],SADDLE:["0","0","0"],TABLE:["0","5","0"],sq:"-40",note:"현장 정도 작업자와 수시 확인·조정"},
+      "DNM5700"   :{BED:["0","0","0"],SADDLE:["0","20","0"],TABLE:["0","5","0"],sq:"-60",note:"현장 정도 작업자와 수시 확인·조정"},
+      "DNM6700"   :{BED:["0","0","0"],SADDLE:["0","60","0"],TABLE:["0","5","0"],sq:"-70",note:"현장 정도 작업자와 수시 확인·조정"},
+      "DNM6700L"  :{BED:["0","0","0"],SADDLE:["0","80","0"],TABLE:["0","5","0"],sq:"-70",note:"현장 정도 작업자와 수시 확인·조정"},
+      "DVM500"    :{BED:["0","0","0"],SADDLE:["0","0","0"],TABLE:["0","5","0"],sq:"-60",note:"현장 정도 작업자와 수시 확인·조정"},
+      "DVM650"    :{BED:["0","0","0"],SADDLE:["0","60","0"],TABLE:["0","5","0"],sq:"-110",note:"현장 정도 작업자와 수시 확인·조정"},
+      "T4000"     :{BED:["0","0","0"],SADDLE:["0","0","0"],TABLE:["0","0","0"],sq:"-20"},
+      "T4000L"    :{BED:["0","0","0"],SADDLE:["0","0","0"],TABLE:["0","0","0"],sq:"-20"}
+    },
+    "성우":{}
+  };
+
+  var CUR={vendor:null,model:null,unit:"",who:""};
+  function fmt(v){return v===null?"—":(Math.round(v*10)/10);}
+
+  /* ===== 부호 전환(±) 버튼 — 숫자 키패드에 "-" 키가 없는 폰 대응.
+     VMCT·HE 입력칸 공용. commit()/data-axis 값 읽기는 건드리지 않고, 입력칸 값을 바꾼 뒤
+     실제 input 이벤트를 발생시켜 기존 리스너가 그대로 반응하게만 한다. */
+  function signBtnHTML(extraAttrs){
+    return '<button type="button" class="signbtn" '+(extraAttrs||'')+'>±</button>';
+  }
+  function toggleSignInput(inp){
+    var raw=inp.value;
+    if(raw===''||raw==='-') return; // 빈 칸이면 아무 동작도 하지 않는다(안전한 쪽) — "-"만 남기지 않음
+    var n=parseFloat(raw);
+    if(isNaN(n)) return;
+    inp.value=String(-n); // n=0이면 String(-0)==="0"이라 -0이 되지 않는다
+    inp.dispatchEvent(new Event('input',{bubbles:true}));
+    inp.focus();
+  }
+  function wireSignBtn(btn,inp){
+    btn.addEventListener('click',function(){ toggleSignInput(inp); refreshSignBtn(btn,inp); });
+  }
+  // 버튼/입력칸에 음수 여부를 시각적으로만 표시(판정 아님) — 수동으로 "-"를 직접 쳐도 반영되도록
+  // 매 input 이벤트마다 다시 계산한다.
+  function refreshSignBtn(btn,inp){
+    var neg = inp.value!=='' && parseFloat(inp.value) < 0;
+    btn.classList.toggle('neg',neg);
+    inp.classList.toggle('neg',neg);
+  }
+  function parseRef(t){ // "10~20" → 15,  "10" → 10,  "" → null
+    if(t===undefined||t===null||t==="")return null;
+    t=String(t).trim();
+    if(t.indexOf("~")>-1){var p=t.split("~");return (parseFloat(p[0])+parseFloat(p[1]))/2;}
+    var v=parseFloat(t); return isNaN(v)?null:v;
+  }
+  function isX(v){ return typeof v==="string" && v.trim().toUpperCase()==="X"; } // "해당 없음" 표시
+  function partNA(arr){ return !!arr && arr.some(isX); }
+  function partEmpty(arr){ return !!arr && arr.every(function(v){ return String(v||"").trim()===""; }); } // 세 칸 모두 빈칸 = 미등록
+  function refLine(part,arr){ // 저장용 REF 라인 하나 생성. X면 null(생략), 빈칸/미등록이면 고정 문구, 그 외엔 실값
+    if(!arr||partEmpty(arr)) return "REF,"+part+",미등록";
+    if(partNA(arr)) return null;
+    return ["REF",part,arr[0],arr[1],arr[2]].join(",");
+  }
+
+  /* 품목 정의 — SADDLE·TABLE·BED 공통 구조 (두 축 × 좌우 2점 × 조립 전후) */
+  var PART_DEFS=[
+    {name:"SADDLE", pfx:"s", axes:["R","L"]},
+    {name:"TABLE",  pfx:"t", axes:["X","Y"]},
+    {name:"BED",    pfx:"b", axes:["R","L"]}
+  ];
+
+  /* =========================================================
+     구배 목표치 — 구글시트 CSV 동기화 (실패해도 위 MASTER 하드코딩값을
+     그대로 사용하는 fallback 구조. 절대 툴 동작을 막지 않음)
+     ========================================================= */
+  var REF_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQcDri_2dl03jAdhLbeLHqHU-mLdxq1mdoCtQoPXKcDjki-Ucq9LqpAp3tFeilm4QhZctL8opDu0LhT/pub?gid=1225207879&single=true&output=csv";
+
+  function parseCSV(text){ // 따옴표로 감싼 콤마/줄바꿈까지 처리하는 최소 CSV 파서
+    var rows=[],row=[],field="",i=0,inQ=false;
+    text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+    while(i<text.length){
+      var c=text[i];
+      if(inQ){
+        if(c==='"'){ if(text[i+1]==='"'){field+='"';i+=2;continue;} inQ=false;i++;continue; }
+        field+=c;i++;continue;
+      }
+      if(c==='"'){inQ=true;i++;continue;}
+      if(c===','){row.push(field);field="";i++;continue;}
+      if(c==='\n'){row.push(field);rows.push(row);row=[];field="";i++;continue;}
+      field+=c;i++;
+    }
+    row.push(field);rows.push(row);
+    if(rows.length&&rows[rows.length-1].length===1&&rows[rows.length-1][0]==="")rows.pop();
+    return rows;
+  }
+  function csvToObjects(text){
+    var rows=parseCSV(text);
+    if(!rows.length)return [];
+    var headers=rows[0].map(function(h){return String(h).trim();});
+    return rows.slice(1)
+      .filter(function(r){return r.some(function(c){return String(c).trim()!=="";});})
+      .map(function(r){
+        var o={};
+        headers.forEach(function(h,idx){o[h]=(r[idx]!==undefined?String(r[idx]):"").trim();});
+        return o;
+      });
+  }
+  function applyRefRows(rows){
+    // 기종 드롭다운은 하드코딩이 아니라 시트에 "행이 있는가"로 결정한다.
+    // 값이 빈칸(미등록)이든 X(해당 없음)든 목록에는 그대로 표시되어야 하므로,
+    // 여기서는 걸러내지 않고 업체별로 시트에 나온 순서 그대로 MASTER를 다시 만든다.
+    var applied=0,skipped=0;
+    var byVendor={}; // vendor -> [{model,row}, ...] (시트 등장 순서 유지)
+    rows.forEach(function(r){
+      var vendor=r["업체"],model=r["기종"];
+      if(!vendor||!model){ skipped++; return; }
+      if(!byVendor[vendor]) byVendor[vendor]=[];
+      byVendor[vendor].push({model:model,row:r});
+      applied++;
+    });
+    Object.keys(byVendor).forEach(function(vendor){
+      var newModels={};
+      byVendor[vendor].forEach(function(item){
+        var model=item.model, r=item.row;
+        // 빈칸은 "0"으로 채우지 않고 그대로 둔다 — 빈칸(미등록)과 실제 0을 구분하기 위함.
+        var spec={
+          SADDLE:[r["SADDLE_좌"]||"",r["SADDLE_중"]||"",r["SADDLE_우"]||""],
+          TABLE :[r["TABLE_좌"] ||"",r["TABLE_중"] ||"",r["TABLE_우"] ||""],
+          BED   :[r["BED_좌"]   ||"",r["BED_중"]   ||"",r["BED_우"]   ||""],
+          sq:r["직각도"]||""
+        };
+        if(r["비고"])spec.note=r["비고"];
+        // SADDLE·TABLE·BED 모두 X(해당 없음)인 기종은 표시할 필요가 없어 목록에서 제외한다.
+        // 일부만 X인 경우는 그대로 목록에 두고, 해당 부품만 카드를 숨긴다(기존 동작).
+        if(partNA(spec.SADDLE)&&partNA(spec.TABLE)&&partNA(spec.BED)) return;
+        newModels[model]=spec;
+      });
+      MASTER[vendor]=newModels; // 해당 업체의 기종 목록을 시트 기준으로 완전히 교체
+    });
+    return {applied:applied,skipped:skipped};
+  }
+  function setSheetStatus(ok){
+    var el=document.getElementById('sheet-warn');
+    if(el) el.style.display=ok?'none':'block';
+  }
+
+  /* ===== 진단 패널용 상태 — 폰 실기에서 콘솔을 볼 수 없어 화면에 표시한다 =====
+     두 시트(VMCT/HE) 로딩이 "모두" 끝난 뒤에만 최종 기종 목록/판별을 다시 그려서,
+     로딩 순서에 따라 라인 판별이 어긋나는 일이 없도록 한다. */
+  var DIAG={
+    vmct:{status:'pending',label:'로딩 중…',rows:0,applied:0,skipped:0},
+    he:{status:'pending',label:'로딩 중…',rows:0,applied:0,skipped:0}
+  };
+  var vmctSheetDone=false, heSheetDone=false;
+  function checkBothSheetsLoaded(){
+    if(!(vmctSheetDone&&heSheetDone)) return;
+    if(CUR.vendor){
+      fillModels(CUR.vendor);
+      applyRef();
+      renderCards();
+      checkCollapse();
+    }
+    renderDiag();
+  }
+
+  function loadRefFromSheet(){
+    fetch(REF_CSV_URL).then(function(res){
+      if(!res.ok){ var e=new Error("HTTP "+res.status); e.kind="http"; throw e; }
+      return res.text();
+    }).then(function(text){
+      if(/^\s*<(!doctype|html)/i.test(text)){
+        var e=new Error("CSV가 아닌 HTML 응답 — 시트 게시(공개) 설정을 확인하세요");
+        e.kind="format"; throw e;
+      }
+      var rows=csvToObjects(text);
+      if(!rows.length){
+        var e2=new Error("파싱된 데이터 행이 0건");
+        e2.kind="empty"; throw e2;
+      }
+      var r=applyRefRows(rows);
+      console.log("[구배 목표치] 로딩 성공 · 원본 "+rows.length+"행 · 적용 "+r.applied+"건 · 제외 "+r.skipped+"건");
+      DIAG.vmct={status:'ok',label:'로딩 성공',rows:rows.length,applied:r.applied,skipped:r.skipped};
+      setSheetStatus(true);
+      refreshVendorOptions();
+      if(CUR.vendor){
+        fillModels(CUR.vendor); // 기종 목록을 시트 기준으로 다시 그림
+        applyRef();
+        checkCollapse();
+      }
+    }).catch(function(err){
+      // 실패 원인 구분: network(요청 자체 실패) / http(상태 이상) / format(CSV 아님) / empty(행 0건)
+      var kind=(err&&err.kind)||"network";
+      var label = kind==="network" ? "네트워크/CORS 오류 — 요청 자체가 실패함"
+                : kind==="http"    ? "서버 응답 오류 — "+err.message
+                : kind==="format"  ? "형식 오류 — "+err.message
+                : kind==="empty"   ? "빈 데이터 — "+err.message
+                : "알 수 없는 오류";
+      console.warn("[구배 목표치] 로딩 실패 ("+label+") — 하드코딩 기본값 사용으로 계속 진행:",err);
+      DIAG.vmct={status:'fail',label:'로딩 실패: '+label,rows:0,applied:0,skipped:0};
+      setSheetStatus(false);
+    }).then(function(){
+      vmctSheetDone=true;
+      checkBothSheetsLoaded();
+    });
+  }
+  loadRefFromSheet();
+
+  /* =========================================================
+     HE 라인 — VMCT와 완전히 별개의 갈래.
+     형상·측정도구·화면이 다 달라서 VMCT 로직(makeModule/applyRef/drawAll)을
+     절대 고쳐 겸용하지 않고, HE 전용 데이터·화면·저장 함수를 새로 둔다.
+     하드코딩 금지 — 반드시 "HE 참고 구배 값" 시트에서 읽는다.
+     ========================================================= */
+  var HE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQcDri_2dl03jAdhLbeLHqHU-mLdxq1mdoCtQoPXKcDjki-Ucq9LqpAp3tFeilm4QhZctL8opDu0LhT/pub?gid=496973598&single=true&output=csv";
+  var HE_MASTER = {}; // HE_MASTER[vendor][model] = {parts:["COLUMN"] 또는 ["UP","BED"], sections:[{name,distStart,distEnd,L,R}, ...]}
+
+  function parseHEDist(str){ // "0~655mm" → [0,655]
+    str=String(str||'').trim();
+    if(!str) return null;
+    var noUnit=str.replace(/mm/gi,'').trim();
+    var parts=noUnit.split('~');
+    if(parts.length!==2) return null;
+    var a=parseFloat(parts[0]), b=parseFloat(parts[1]);
+    if(isNaN(a)||isNaN(b)) return null;
+    return [a,b];
+  }
+  function heMmToUm(v){ // mm(시트) → μm(앱 내부 통일 단위). 부동소수 오차 방지를 위해 반드시 Math.round.
+    var s=String(v===undefined||v===null?'':v).trim();
+    if(s==='') return null;
+    var n=parseFloat(s);
+    if(isNaN(n)) return null;
+    return Math.round(n*1000);
+  }
+  function buildHEMaster(csvRows){
+    // 원본 시트가 병합셀이라 헤더 이름을 신뢰할 수 없다 — 열 "위치" 기준으로 읽는다.
+    // A=업체 B=기종 C=품목 D=구간명 E=거리 F=L값 G=R값 (H=비고, 사용 안 함). 첫 행(헤더)은 건너뜀.
+    // 병합셀 때문에 둘째 행부터 업체·기종·품목이 빈칸으로 오므로 직전 행 값을 이어받는다.
+    // 이 처리가 없으면 데이터 절반이 유실된다(요청사항 그대로).
+    var vendor='', model='', partsRaw='';
+    var groups={}, order=[], skipped=0;
+    for(var i=1;i<csvRows.length;i++){
+      var r=csvRows[i];
+      if(!r || !r.some(function(c){ return String(c||'').trim()!==''; })) continue; // 완전 빈 행
+      var v=String(r[0]||'').trim(); if(v) vendor=v;
+      var m=String(r[1]||'').trim(); if(m) model=m;
+      var p=String(r[2]||'').trim(); if(p) partsRaw=p;
+      if(!vendor||!model){ skipped++; continue; }
+      var key=vendor+'|'+model;
+      if(!groups[key]){
+        groups[key]={
+          vendor:vendor, model:model,
+          // 품목 칸은 쪼개지 않는다 — "UP BED"는 품목 2개가 아니라 품목 하나의 이름이다(BED 안에 UP·BOTTOM 부위가 있는 구조).
+          parts:partsRaw ? [partsRaw] : [],
+          sections:[]
+        };
+        order.push(key);
+      }
+      var dist=parseHEDist(r[4]);
+      if(!dist){ skipped++; continue; }
+      groups[key].sections.push({
+        name:String(r[3]||'').trim()||('구간'+(groups[key].sections.length+1)),
+        distStart:dist[0], distEnd:dist[1],
+        L:heMmToUm(r[5]), R:heMmToUm(r[6])
+      });
+    }
+    var master={}, applied=0;
+    order.forEach(function(key){
+      var g=groups[key];
+      if(g.sections.length<2 || !g.parts.length){
+        console.warn("[HE 구배 목표치] "+g.vendor+"/"+g.model+" 데이터가 불완전합니다(구간 "+g.sections.length+"개, 품목 "+g.parts.length+"개) — 건너뜀");
+        skipped++;
+        return;
+      }
+      if(!master[g.vendor]) master[g.vendor]={};
+      master[g.vendor][g.model]={parts:g.parts, sections:g.sections};
+      applied++;
+    });
+    return {master:master, applied:applied, skipped:skipped};
+  }
+  function getHESpec(vendor,model){
+    var vm=HE_MASTER[vendor]||{};
+    return model?(vm[model]||null):null;
+  }
+  function setHESheetStatus(ok){
+    var el=document.getElementById('sheet-warn-he');
+    if(el) el.style.display=ok?'none':'block';
+  }
+  function loadHEFromSheet(){
+    fetch(HE_CSV_URL).then(function(res){
+      if(!res.ok){ var e=new Error("HTTP "+res.status); e.kind="http"; throw e; }
+      return res.text();
+    }).then(function(text){
+      if(/^\s*<(!doctype|html)/i.test(text)){
+        var e=new Error("CSV가 아닌 HTML 응답 — 시트 게시(공개) 설정을 확인하세요");
+        e.kind="format"; throw e;
+      }
+      var csvRows=parseCSV(text); // 헤더 이름이 아니라 열 위치로 읽으므로 원시 행 배열을 그대로 넘긴다
+      var dataRowCount=Math.max(0,csvRows.length-1); // 첫 행(헤더) 제외
+      if(dataRowCount<=0){
+        var e2=new Error("파싱된 데이터 행이 0건");
+        e2.kind="empty"; throw e2;
+      }
+      var built=buildHEMaster(csvRows);
+      HE_MASTER=built.master;
+      console.log("[HE 구배 목표치] 로딩 성공 · 원본 "+dataRowCount+"행 · 적용 "+built.applied+"건 · 제외 "+built.skipped+"건");
+      DIAG.he={status:'ok',label:'로딩 성공',rows:dataRowCount,applied:built.applied,skipped:built.skipped};
+      setHESheetStatus(true);
+      refreshVendorOptions(); // HE에만 있는 신규 생산처(예: 삼익)를 드롭다운에 반영
+      if(CUR.vendor){
+        fillModels(CUR.vendor);
+        renderCards();
+        if(HE_CURRENT_PART) renderHEPanel(HE_CURRENT_PART);
+        checkCollapse();
+      }
+    }).catch(function(err){
+      var kind=(err&&err.kind)||"network";
+      var label = kind==="network" ? "네트워크/CORS 오류 — 요청 자체가 실패함"
+                : kind==="http"    ? "서버 응답 오류 — "+err.message
+                : kind==="format"  ? "형식 오류 — "+err.message
+                : kind==="empty"   ? "빈 데이터 — "+err.message
+                : "알 수 없는 오류";
+      console.warn("[HE 구배 목표치] 로딩 실패 ("+label+") — HE 기종 목표치가 반영되지 않습니다:",err);
+      DIAG.he={status:'fail',label:'로딩 실패: '+label,rows:0,applied:0,skipped:0};
+      setHESheetStatus(false);
+    }).then(function(){
+      heSheetDone=true;
+      checkBothSheetsLoaded();
+    });
+  }
+  loadHEFromSheet();
+
+  /* =========================================================
+     로컬 저장 — "이름표"만 남긴다 (측정값은 담지 않음, 시트가 원장)
+     - sentLog: (vendor|model|unit|part) → 마지막 성공 전송의 각인번호/시각 (카드 완료 배지용)
+     - recentList: 호기 기준으로 묶은 최근 5건 (시작 화면 이어가기용)
+     ========================================================= */
+  function loadJSON(key,fallback){
+    try{ var raw=localStorage.getItem(key); return raw?JSON.parse(raw):fallback; }
+    catch(e){ return fallback; }
+  }
+  function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+
+  // 마지막으로 저장에 쓰인 측정자 이름 — 한 사람이 한 폰을 쓰는 환경이라 "시작하기" 진입 시 기본값으로 채운다.
+  function loadLastWorker(){ return loadJSON('selfdiag_last_worker',''); }
+  function saveLastWorker(name){ if(name) saveJSON('selfdiag_last_worker',name); }
+
+  function sentKey(part){ return [CUR.vendor||"",CUR.model||"",CUR.unit||"",part].join("|"); }
+  function getPartSent(part){
+    var log=loadJSON('selfdiag_sentlog',{});
+    return log[sentKey(part)]||null;
+  }
+  function markPartSent(part,mark){
+    var log=loadJSON('selfdiag_sentlog',{});
+    log[sentKey(part)]={mark:mark,sentAt:Date.now()};
+    saveJSON('selfdiag_sentlog',log);
+  }
+
+  function loadRecentList(){
+    var list=loadJSON('selfdiag_recent_list',[]);
+    return Array.isArray(list)?list:[];
+  }
+  function upsertRecent(part,mark){
+    var list=loadRecentList();
+    var curKey=CUR.vendor+"|"+CUR.model+"|"+(CUR.unit||"");
+    var idx=-1;
+    for(var i=0;i<list.length;i++){
+      if((list[i].vendor+"|"+list[i].model+"|"+(list[i].unit||""))===curKey){ idx=i; break; }
+    }
+    var entry = idx>=0 ? list[idx] : {vendor:CUR.vendor,model:CUR.model,unit:CUR.unit||"",who:CUR.who||"",parts:{}};
+    entry.who = CUR.who||entry.who;
+    if(!entry.parts) entry.parts={};
+    entry.parts[part]={mark:mark,sentAt:Date.now()};
+    entry.ts=Date.now();
+    if(idx>=0) list.splice(idx,1);
+    list.unshift(entry);
+    if(list.length>5) list=list.slice(0,5);
+    saveJSON('selfdiag_recent_list',list);
+  }
+
+  function relTime(ts){
+    var diff=Date.now()-ts, s=Math.floor(diff/1000);
+    if(s<60)return "방금 전";
+    var m=Math.floor(s/60); if(m<60)return m+"분 전";
+    var h=Math.floor(m/60); if(h<24)return h+"시간 전";
+    var d=Math.floor(h/24); if(d<30)return d+"일 전";
+    var mo=Math.floor(d/30); if(mo<12)return mo+"개월 전";
+    return Math.floor(mo/12)+"년 전";
+  }
+
+  /* ===== 시작 화면 ===== */
+  var VENDOR_NAMES=Object.keys(MASTER);
+  var DEFAULT_VENDOR=VENDOR_NAMES[0];
+
+  function renderRecentList(){
+    var list=loadRecentList();
+    var wrap=document.getElementById('recent-wrap');
+    var box=document.getElementById('recent-list');
+    if(!list.length){ wrap.style.display='none'; return; }
+    wrap.style.display='block';
+    box.innerHTML='';
+    list.forEach(function(entry){
+      var btn=document.createElement('button');
+      btn.type='button'; btn.className='recent-item';
+      var partsHtml='';
+      var knownPartNames=PART_DEFS.map(function(p){return p.name;}).concat(['LEVEL']);
+      PART_DEFS.concat([{name:"LEVEL"}]).forEach(function(p){
+        var done = entry.parts && entry.parts[p.name];
+        partsHtml += '<span class="rl-part'+(done?' done':'')+'">'+p.name+'</span>';
+      });
+      if(entry.parts){
+        Object.keys(entry.parts).forEach(function(name){
+          if(knownPartNames.indexOf(name)===-1){
+            partsHtml += '<span class="rl-part done">'+escapeHTML(name)+'</span>';
+          }
+        });
+      }
+      btn.innerHTML =
+        '<div class="rl-main"><span class="rl-val">'+escapeHTML(entry.vendor+' · '+entry.model+' · '+(entry.unit||'호기미정'))+'</span>'+
+        '<span class="rl-time">'+relTime(entry.ts)+'</span></div>'+
+        '<div class="rl-parts">'+partsHtml+'</div>';
+      btn.addEventListener('click',function(){ resumeRecent(entry); });
+      box.appendChild(btn);
+    });
+  }
+  renderRecentList();
+
+  // "시작하기" = 새 측정 진입점 → 이전 세션의 입력값·측정값을 전부 비운다.
+  // 최근 기록(localStorage)은 이어가기용 이름표라 절대 건드리지 않는다.
+  // 측정자만 예외 — 한 폰을 한 사람이 쓰는 환경이라 마지막 사용 이름을 기본값으로 채워둔다(수정 가능).
+  function resetSession(){
+    CUR.model=""; CUR.unit="";
+    document.getElementById('sel-unit').value='';
+    CUR.who=loadLastWorker();
+    document.getElementById('sel-who').value=CUR.who;
+    PART_DEFS.forEach(function(p){
+      document.getElementById(p.pfx+'-mark').value='';
+      if(modules[p.pfx]) modules[p.pfx].reset();
+      // 진직도 상세계산 접이식도 다시 열면 새로 시작하도록 비운다
+      var body=document.getElementById(p.pfx+'-straight-body');
+      var btn=document.querySelector('.collapse-btn[data-target="'+p.pfx+'-straight"]');
+      if(body){ body.innerHTML=''; body.classList.remove('open'); delete body.dataset.built; }
+      if(btn) btn.classList.remove('open');
+    });
+    STRAIGHT={};
+    HE_STATE={}; HE_CURRENT_PART=null; // HE 측정 상태도 VMCT와 동일하게 새 세션에서 비운다
+    var card=document.getElementById('sel-infocard');
+    card.dataset.manualOpen='';
+  }
+
+  // VMCT MASTER·HE_MASTER 어느 쪽에든 있으면 유효한 생산처/기종으로 본다 (HE 전용 생산처 예: 삼익)
+  function vendorExists(v){ return !!(MASTER[v]||HE_MASTER[v]); }
+  function modelExists(v,m){ return !!((MASTER[v]&&MASTER[v][m])||(HE_MASTER[v]&&HE_MASTER[v][m])); }
+
+  document.getElementById('btn-start').addEventListener('click',function(){
+    resetSession();
+    var list=loadRecentList();
+    var vendor=(list.length&&vendorExists(list[0].vendor))?list[0].vendor:DEFAULT_VENDOR;
+    enterMain(vendor);
+  });
+
+  function resumeRecent(entry){
+    var vendor=vendorExists(entry.vendor)?entry.vendor:DEFAULT_VENDOR;
+    enterMain(vendor);
+    if(entry.model&&modelExists(vendor,entry.model)){
+      CUR.model=entry.model;
+      modelSel.value=entry.model;
+      applyRef();
+    }
+    document.getElementById('sel-unit').value=entry.unit||'';
+    document.getElementById('sel-who').value=entry.who||'';
+    CUR.unit=entry.unit||''; CUR.who=entry.who||'';
+    if(entry.parts){
+      PART_DEFS.forEach(function(p){
+        var rec=entry.parts[p.name];
+        if(rec){ document.getElementById(p.pfx+'-mark').value=rec.mark||''; }
+      });
+      // HE 등 PART_DEFS에 없는 품목명(예: COLUMN/UP/BED)의 각인번호도 복원한다
+      var knownNames=PART_DEFS.map(function(p){return p.name;});
+      Object.keys(entry.parts).forEach(function(name){
+        if(knownNames.indexOf(name)===-1 && name!=='LEVEL'){
+          heStateFor(name).mark=entry.parts[name].mark||'';
+        }
+      });
+    }
+    updateCtxLine();
+    renderCards();
+    checkCollapse();
+  }
+
+  /* ===== 생산처 / 기종 (공용 선택 화면) ===== */
+  var vendorSel=document.getElementById('sel-vendor');
+  var modelSel=document.getElementById('sel-model');
+
+  // HE 시트에는 VMCT MASTER에 없는 신규 생산처(예: 삼익)가 있을 수 있어,
+  // 드롭다운을 VMCT+HE 생산처 합집합으로 채우고 각 시트 로딩 후에도 다시 갱신한다.
+  function refreshVendorOptions(){
+    var names={};
+    Object.keys(MASTER).forEach(function(v){ names[v]=true; });
+    Object.keys(HE_MASTER).forEach(function(v){ names[v]=true; });
+    var all=Object.keys(names);
+    vendorSel.innerHTML="";
+    all.forEach(function(v){ var o=document.createElement('option'); o.value=v; o.textContent=v; vendorSel.appendChild(o); });
+    if(CUR.vendor && all.indexOf(CUR.vendor)!==-1) vendorSel.value=CUR.vendor;
+  }
+  refreshVendorOptions();
+
+  function fillModels(vendor){
+    // 사용자에게 VMCT/HE를 고르게 하지 않는다 — 한 드롭다운에 두 라인의 기종을 모두 나열하고,
+    // 실제로 어느 라인인지는 renderCards()/openHEPart() 등에서 기종명으로 자동 판별한다.
+    // 같은 기종명이 VMCT·HE 양쪽에 다 있으면(예: 대영 DVF4000) 드롭다운엔 한 번만 표시한다 — HE를 우선.
+    var heModels=Object.keys(HE_MASTER[vendor]||{});
+    var models=heModels.concat(Object.keys(MASTER[vendor]||{}).filter(function(m){ return heModels.indexOf(m)===-1; }));
+    var prevModel=CUR.model;
+    var matched=models.indexOf(prevModel)!==-1;
+    modelSel.innerHTML="";
+    if(models.length===0){
+      var na=document.createElement('option'); na.value=""; na.textContent="미등록"; modelSel.appendChild(na);
+      modelSel.value=""; modelSel.disabled=true;
+    }else{
+      modelSel.disabled=false;
+      if(!matched){
+        var ph=document.createElement('option'); ph.value=""; ph.textContent="기종 선택"; modelSel.appendChild(ph);
+      }
+      models.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; modelSel.appendChild(o); });
+      modelSel.value=matched?prevModel:"";
+    }
+    CUR.model=models.length?(matched?prevModel:""):"";
+    if(window.__lvFillModels) window.__lvFillModels(vendor);
+  }
+  function updateCtxLine(){
+    document.getElementById('ctx-line').textContent =
+      (CUR.vendor||'—')+' · '+(CUR.model||'기종 미선택')+' · '+(CUR.unit||'호기 미정');
+  }
+  function setVendor(vendor){
+    CUR.vendor=vendor;
+    vendorSel.value=vendor;
+    fillModels(vendor);
+    applyRef();
+    renderCards();
+    updateCtxLine();
+    checkCollapse();
+  }
+  function enterMain(vendor){
+    setVendor(vendor);
+    showPanel('cards');
+    document.getElementById('screen-start').style.display='none';
+    document.getElementById('screen-main').classList.add('on');
+  }
+  document.getElementById('btn-back').addEventListener('click',function(){
+    if(!document.getElementById('panel-cards').classList.contains('on')){
+      showPanel('cards');
+      return;
+    }
+    document.getElementById('screen-main').classList.remove('on');
+    document.getElementById('screen-start').style.display='flex';
+    renderRecentList();
+  });
+  vendorSel.addEventListener('change',function(){ setVendor(vendorSel.value); });
+  modelSel.addEventListener('change',function(){
+    CUR.model=modelSel.value;
+    applyRef();
+    renderCards();
+    updateCtxLine();
+  });
+  document.getElementById('sel-unit').addEventListener('input',function(){
+    CUR.unit=this.value.trim(); updateCtxLine(); renderCards();
+  });
+  document.getElementById('sel-who').addEventListener('input',function(){ CUR.who=this.value.trim(); });
+
+  /* ===== 화면 전환 (카드 목록 ↔ 품목/이송레벨/진직도) ===== */
+  function showPanel(name){
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+    var id = name==='cards' ? 'panel-cards'
+           : name==='level' ? 'panel-level'
+           : name==='straight' ? 'panel-straight'
+           : name==='he' ? 'panel-part-he'
+           : 'panel-part-'+name; // 's' | 't' | 'b'
+    var el=document.getElementById(id);
+    if(el) el.classList.add('on');
+  }
+  document.querySelectorAll('.part-back').forEach(function(btn){
+    btn.addEventListener('click',function(){ showPanel(btn.dataset.back); });
+  });
+  document.getElementById('goto-straight').addEventListener('click',function(){ showPanel('straight'); });
+  document.getElementById('card-LEVEL').addEventListener('click',function(){ showPanel('level'); });
+  document.querySelectorAll('.item-card[data-part]').forEach(function(card){
+    card.addEventListener('click',function(){
+      if(card.hasAttribute('hidden')) return;
+      var part=card.dataset.part;
+      var def=null;
+      PART_DEFS.forEach(function(p){ if(p.name===part) def=p; });
+      if(def) showPanel(def.pfx);
+    });
+  });
+
+  // 저장 직후 카드 목록으로 돌아왔을 때, 방금 저장한 카드를 잠깐 강조해 눈에 띄게 한다
+  function flashCard(part){
+    var card=document.getElementById('card-'+part);
+    if(!card){
+      // HE 동적 카드는 고정 id가 없다 — 품목명(data-part)으로 찾는다
+      Array.prototype.slice.call(document.querySelectorAll('.item-card.he-dynamic')).forEach(function(el){
+        if(el.dataset.part===part) card=el;
+      });
+    }
+    if(!card) return;
+    card.classList.remove('just-saved');
+    void card.offsetWidth; // 애니메이션 재시작(연속 저장 시에도 다시 반짝이도록)
+    card.classList.add('just-saved');
+    setTimeout(function(){ card.classList.remove('just-saved'); },2400);
+  }
+
+  /* ===== 품목 카드 렌더링 (완료/미측정 배지, 목표치 요약, X 부품 숨김) =====
+     판별 단위는 "기종"이 아니라 "품목"이다. 한 기종 안에서도 품목마다 측정 방식이
+     다를 수 있으므로(예: 대영 DVF4000의 COLUMN=인디게이터/HE, BED=수준기/VMCT),
+     HE 시트와 VMCT 시트 양쪽에서 그 기종의 품목을 모두 모아 한 목록에 섞어 표시한다.
+     같은 품목명이 양쪽에 다 있으면 HE를 우선하고(진단 패널에 경고 표시), VMCT 카드는 숨긴다. */
+  function renderCards(){
+    var heSpec=getHESpec(CUR.vendor,CUR.model);
+    var heParts=heSpec?heSpec.parts:[];
+
+    var vendorModels=MASTER[CUR.vendor]||{};
+    var spec=CUR.model?vendorModels[CUR.model]:null;
+    // 이 기종이 VMCT 시트엔 전혀 없고 HE 시트에만 있는 경우(예: 삼익 DVF5000)는
+    // "미등록" 플레이스홀더 카드를 보여줄 이유가 없다 — 완전히 다른 구조의 기종이기 때문.
+    // (VMCT·HE 둘 다에 없는 진짜 미등록 기종은 기존 정책대로 플레이스홀더를 보여준다)
+    var vmctOnlyAbsentForHEModel = !spec && !!heSpec;
+    PART_DEFS.forEach(function(p){
+      var card=document.getElementById('card-'+p.name);
+      var arr=spec&&spec[p.name];
+      var na=partNA(arr);
+      var dupWithHE=heParts.indexOf(p.name)!==-1; // 같은 품목명이 HE에도 있으면 HE 우선 — VMCT 카드는 숨김
+      card.hidden = !!na || dupWithHE || vmctOnlyAbsentForHEModel;
+      if(card.hidden) return;
+      var refTxt;
+      if(!spec||partEmpty(arr)) refTxt="목표치 미등록";
+      else refTxt="목표치 "+arr[0]+" / "+arr[1]+" / "+arr[2];
+      document.getElementById('cardref-'+p.name).textContent=refTxt;
+      var sent=getPartSent(p.name);
+      var badge=document.getElementById('badge-'+p.name);
+      if(sent){ badge.textContent="● 완료"; badge.classList.add('done'); }
+      else{ badge.textContent="○ 미측정"; badge.classList.remove('done'); }
+    });
+    renderHECards(heSpec);
+
+    var lv=getPartSent("LEVEL");
+    var lvBadge=document.getElementById('badge-LEVEL');
+    if(lv){ lvBadge.textContent="● 완료"; lvBadge.classList.add('done'); }
+    else{ lvBadge.textContent="○ 미측정"; lvBadge.classList.remove('done'); }
+
+    renderDiag();
+  }
+
+  /* ===== 진단 패널 — 폰(Netlify) 실기에서 콘솔을 볼 수 없어 화면에 직접 표시한다.
+     평소엔 접혀 있고, 시트 로딩 성공/실패·행 수·인식된 HE 기종·현재 선택 기종의
+     품목별 출처(HE/VMCT)와 중복 여부를 그대로 보여줘 눈으로 바로 확인할 수 있게 한다. ===== */
+  function renderDiag(){
+    var el=document.getElementById('diag-body');
+    if(!el) return;
+    var heModelList=[];
+    Object.keys(HE_MASTER).forEach(function(v){
+      Object.keys(HE_MASTER[v]).forEach(function(m){ heModelList.push(v+'/'+m); });
+    });
+    var heSpec=getHESpec(CUR.vendor,CUR.model);
+    var heParts=heSpec?heSpec.parts:[];
+    var vendorModels=MASTER[CUR.vendor]||{};
+    var spec=CUR.model?vendorModels[CUR.model]:null;
+    var vmctParts=[];
+    if(spec){
+      PART_DEFS.forEach(function(p){ if(!partNA(spec[p.name])) vmctParts.push(p.name); });
+    }
+    var dup=heParts.filter(function(p){ return vmctParts.indexOf(p)!==-1; });
+    function rowHTML(d){
+      if(d.status==='pending') return d.label;
+      if(d.status==='fail') return d.label;
+      var extra="원본 "+d.rows+"행 · 적용 "+d.applied+"건"+(d.skipped?(" · 제외 "+d.skipped+"건"):"");
+      return d.label+" ("+extra+")";
+    }
+    var selTxt = !CUR.vendor||!CUR.model ? "기종 미선택" : (CUR.vendor+' / '+CUR.model);
+    el.innerHTML=
+      '<div class="diag-row"><b>VMCT 목표치 시트</b><br>'+escapeHTML(rowHTML(DIAG.vmct))+'</div>'+
+      '<div class="diag-row"><b>HE 참고 구배 값 시트</b><br>'+escapeHTML(rowHTML(DIAG.he))+'</div>'+
+      '<div class="diag-row"><b>인식된 HE 기종</b><br>'+(heModelList.length?escapeHTML(heModelList.join(', ')):'없음')+'</div>'+
+      '<div class="diag-row"><b>현재 선택</b> — '+escapeHTML(selTxt)+
+        '<br>HE 출신 품목: '+(heParts.length?escapeHTML(heParts.join(', ')):'없음')+
+        '<br>VMCT 출신 품목: '+(vmctParts.length?escapeHTML(vmctParts.join(', ')):'없음')+'</div>'+
+      (dup.length ? '<div class="diag-row" style="color:#FAB416"><b>⚠ 중복 품목</b><br>'+escapeHTML(dup.join(', '))+
+        ' 이(가) HE·VMCT 양쪽에 모두 등록되어 있습니다 — HE를 우선 적용했습니다.</div>' : '');
+  }
+
+  /* ===== HE 품목 카드 렌더링 — VMCT 카드와 같은 목록(#item-cards)에 섞어서 그린다.
+     구분선/그룹 없이 "인디게이터" 배지만으로 VMCT 카드와 구분한다. ===== */
+  function fmtHE(v){ return (v===null||v===undefined) ? "—" : v; }
+  function renderHECards(heSpec){
+    var container=document.getElementById('item-cards');
+    var levelCard=document.getElementById('card-LEVEL');
+    Array.prototype.slice.call(container.querySelectorAll('.item-card.he-dynamic')).forEach(function(el){ el.remove(); });
+    if(!heSpec) return;
+    var s1=heSpec.sections[1];
+    heSpec.parts.forEach(function(part){
+      var sent=getPartSent(part);
+      var btn=document.createElement('button');
+      btn.type='button'; btn.className='item-card he-dynamic';
+      btn.dataset.part=part;
+      btn.innerHTML=
+        '<div class="item-card-top"><span class="item-card-name">'+escapeHTML(part)+'</span>'+
+        '<span class="item-card-method">인디게이터</span>'+
+        '<span class="item-card-badge'+(sent?' done':'')+'">'+(sent?'● 완료':'○ 미측정')+'</span></div>'+
+        '<div class="item-card-ref">목표 L'+fmtHE(s1.L)+' / R'+fmtHE(s1.R)+' μm</div>';
+      btn.addEventListener('click',function(){ openHEPart(part); });
+      container.insertBefore(btn, levelCard);
+    });
+  }
+
+  var modules={};
+  function applyRef(){
+    var vendorModels=MASTER[CUR.vendor]||{};
+    var spec=CUR.model?vendorModels[CUR.model]:null;
+    PART_DEFS.forEach(function(p){
+      var refEl=document.getElementById(p.pfx+'-ref');
+      var mod=modules[p.pfx];
+      if(!spec){
+        var txt=Object.keys(vendorModels).length===0?"미등록":"—";
+        if(refEl) refEl.textContent=txt;
+        mod&&mod.setNA(false);
+        mod&&mod.setRef(null);
+        return;
+      }
+      var arr=spec[p.name];
+      if(partNA(arr)){
+        if(refEl) refEl.textContent="해당 없음";
+        mod.setNA(true);
+        mod.setRef(null);
+      }else if(partEmpty(arr)){
+        if(refEl) refEl.textContent="미등록";
+        mod.setNA(false);
+        mod.setRef(null);
+      }else{
+        var ref=[parseRef(arr[0]),parseRef(arr[2])]; // 가운데(arr[1])는 시트에서 읽되 화면·저장에는 쓰지 않는다
+        if(refEl) refEl.textContent=arr[0]+" / "+arr[1]+" / "+arr[2]+" ㎛/m";
+        mod.setNA(false);
+        mod.setRef(ref[0]===null?null:ref);
+      }
+    });
+  }
+
+  /* ===== 대물 정보(공용) 카드 접기/펼치기 — 기종이 선택되면 접힘 ===== */
+  function checkCollapse(){
+    var card=document.getElementById('sel-infocard');
+    var manualOpen=card.dataset.manualOpen==='1';
+    if(CUR.model&&!manualOpen){
+      card.classList.add('collapsed');
+      document.getElementById('sel-info-sumtxt').textContent=
+        CUR.vendor+" · "+CUR.model+" · "+(CUR.unit||'호기 미정')+" · "+(CUR.who||'측정자 미기재');
+    }else{
+      card.classList.remove('collapsed');
+    }
+  }
+  (function(){
+    var form=document.getElementById('sel-info-form');
+    form.addEventListener('focusout',function(){
+      setTimeout(function(){
+        if(!form.contains(document.activeElement)){
+          document.getElementById('sel-infocard').dataset.manualOpen='';
+          checkCollapse();
+        }
+      },0);
+    });
+    document.getElementById('sel-info-edit').addEventListener('click',function(){
+      var card=document.getElementById('sel-infocard');
+      card.dataset.manualOpen='1';
+      card.classList.remove('collapsed');
+    });
+  })();
+
+  /* ===== 진직도 계산 (유관부서 로직) ===== */
+  /* 분해능: 눈금 1칸이 구간길이 segLen(mm)에서 만드는 높이차(mm)를 돌려준다. 모든 진직도 계산이 이 표 하나를 쓴다. */
+  /* 구간 높이차 = 눈금 × (분해능값 ÷ 기준길이) × 구간길이. 세 값 모두 1mm당 0.00002. */
+  var RESOLUTIONS={
+    "0.02/m":   {label:"0.02/m",    val:0.02, base:1000},
+    "0.004/200":{label:"0.004/200", val:0.004,base:200},
+    "0.003/150":{label:"0.003/150", val:0.003,base:150}
+  };
+  Object.keys(RESOLUTIONS).forEach(function(k){
+    var r=RESOLUTIONS[k]; r.perMm=function(segLen){return (r.val/r.base)*segLen;};
+  });
+  /* 진직도 계산 단일 함수 — 독립 계산기와 품목별 상세계산이 모두 이것을 쓴다.
+     m: 구간별 원본 눈금값, resKey: 분해능 키, segLen: 균등 구간길이(측정 길이 ÷ 구간 수) */
+  function computeDetail(m,resKey,segLen){
+    var k=(RESOLUTIONS[resKey]||RESOLUTIONS["0.02/m"]).perMm(segLen);
+    var N=m.length,cum=[0],cor=[0],dif=[0],h=[0];
+    for(var i=1;i<=N;i++)cum[i]=cum[i-1]+(m[i-1]||0);
+    var total=cum[N];
+    for(var i=1;i<=N;i++)cor[i]=(total/N)*i;
+    for(var i=0;i<=N;i++){dif[i]=cum[i]-cor[i];h[i]=dif[i]*k;}
+    return {cum:cum,cor:cor,dif:dif,h:h};
+  }
+  function straightness(h){var mx=h[0],mn=h[0];for(var i=1;i<h.length;i++){if(h[i]>mx)mx=h[i];if(h[i]<mn)mn=h[i];}return mx-mn;}
+
+  var STRAIGHT={};
+
+  /* ===== SADDLE / TABLE / BED 공통 모듈 ===== */
+  function makeModule(pfx,axes){
+    var A1=axes[0],A2=axes[1];
+    var st={phase:"before",data:{},entered:{}};
+    axes.forEach(function(a){
+      st.data[a]={before:null,after:null,ref:null};
+      st.entered[a]={before:[false,false],after:[false,false]}; // 칸이 "실제로 입력된 적 있는지" — 0과 미입력을 구분하기 위함 (commit()과는 별개)
+    });
+    var elSegs=document.getElementById(pfx+'-segs'),
+        elCharts=document.getElementById(pfx+'-charts'),
+        elActive=document.getElementById(pfx+'-msmt-active'),
+        elNA=document.getElementById(pfx+'-na-notice');
+
+    function setNA(na){
+      st.na=na;
+      if(elActive) elActive.style.display=na?'none':'';
+      if(elNA) elNA.style.display=na?'block':'none';
+    }
+
+    function axisBlockHTML(axis){
+      var cur=st.data[axis][st.phase];
+      var before=st.data[axis].before;
+      var enteredCur=st.entered[axis][st.phase];
+      var enteredBefore=st.entered[axis].before;
+      function cellHTML(i){
+        var v=(cur&&enteredCur[i])?cur[i]:'';
+        var ref='';
+        if(st.phase==="after"&&before&&enteredBefore[i]){
+          ref='<div class="ref-before">(전: '+fmt(before[i])+')</div>';
+        }
+        return '<div class="mcell"><div class="mcell-row">'+
+          '<input type="number" data-axis="'+axis+'" data-i="'+i+'" placeholder="–" value="'+v+'">'+
+          signBtnHTML('data-sign-axis="'+axis+'" data-sign-i="'+i+'"')+
+          '</div>'+ref+'</div>';
+      }
+      return '<div class="axis-block" data-axis="'+axis+'">'+
+        '<div class="axis-lab">'+axis+'</div>'+
+        '<div class="mcell-lab">좌</div>'+cellHTML(0)+
+        '<div class="mcell-lab">우</div>'+cellHTML(1)+
+        '</div>';
+    }
+    function buildSegs(){
+      elSegs.innerHTML=axisBlockHTML(A1)+axisBlockHTML(A2);
+      elSegs.querySelectorAll('input[data-axis]').forEach(function(inp){
+        inp.setAttribute('inputmode','decimal');
+        inp.addEventListener('focus',function(){ this.select(); });
+        inp.addEventListener('input',commit);
+        // 0과 미입력을 구분하기 위한 별도 표시 — commit()의 data-axis 읽기 로직은 그대로 둠
+        inp.addEventListener('input',function(e){
+          var axis=e.target.dataset.axis, i=+e.target.dataset.i;
+          st.entered[axis][st.phase][i]=(e.target.value!=='');
+        });
+        var btn=inp.parentElement.querySelector('.signbtn');
+        if(btn){
+          wireSignBtn(btn,inp);
+          inp.addEventListener('input',function(){ refreshSignBtn(btn,inp); });
+          refreshSignBtn(btn,inp);
+        }
+      });
+    }
+    function commit(e){
+      var axis=e.target.dataset.axis;
+      var v=[];
+      elSegs.querySelectorAll('input[data-axis="'+axis+'"]').forEach(function(inp){v.push(parseFloat(inp.value)||0);});
+      st.data[axis][st.phase]=v;render();
+    }
+    document.getElementById(pfx+'-phase-sw').addEventListener('click',function(e){
+      var t=e.target.closest('[data-v]');if(!t)return;st.phase=t.dataset.v;
+      this.querySelectorAll('.opt').forEach(function(x){x.classList.toggle('on',x===t);x.classList.toggle('after',x.dataset.v==="after");});buildSegs();render();
+    });
+
+    function drawAll(){
+      // 차트는 탭과 무관하게 항상 "조립 전" 데이터를 그린다 — 조립 후 탭에서도 조립 전 형상을 계속 참고.
+      var W=380,H=164,padX=36,plotTop=18,plotBottom=146;
+      var xL=padX,xC=W/2,xR=W-padX;
+      var d1=st.data[A1],d2=st.data[A2];
+
+      // "빈 칸=0" 착시 방지 (7차 유지): 실제로 입력된 적 있는 쪽만 값으로 취급.
+      // 0은 유효한 실측값(구배 0 = 완전 수평)이므로 미입력과 구분한다 (st.entered 기준).
+      function side(arr,enteredArr,i){ return (arr&&enteredArr&&enteredArr[i])?arr[i]:null; }
+      var d1L=side(d1.before,st.entered[A1].before,0), d1R=side(d1.before,st.entered[A1].before,1);
+      var d2L=side(d2.before,st.entered[A2].before,0), d2R=side(d2.before,st.entered[A2].before,1);
+
+      // 값이 하나도 없으면 제목·차트 영역 자체를 그리지 않는다
+      if(d1L===null&&d1R===null&&d2L===null&&d2R===null){ return ''; }
+
+      // y축 범위: 실제 입력값 + 목표치(REF)까지 함께 반영해 자동 산정
+      var vals=[0];
+      [d1L,d1R,d2L,d2R].forEach(function(v){ if(v!==null) vals.push(v); });
+      if(d1.ref){ vals.push(d1.ref[0],d1.ref[1]); }
+      if(d2.ref){ vals.push(d2.ref[0],d2.ref[1]); }
+      var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
+      if(minV===maxV){ minV-=10; maxV+=10; }
+      var pad=(maxV-minV)*0.15;
+      minV-=pad; maxV+=pad;
+      var scale=(plotBottom-plotTop)/(maxV-minV);
+      function yA(v){ return plotBottom-(v-minV)*scale; }
+      var baseY=yA(0);
+
+      function curve(a){
+        var y0=yA(a[0]).toFixed(1),yc=yA(0).toFixed(1),y1=yA(a[1]).toFixed(1);
+        return "M"+xL+","+y0+" Q"+((xL+xC)/2)+","+yc+" "+xC+","+yc+" Q"+((xC+xR)/2)+","+yc+" "+xR+","+y1;
+      }
+      function line(a,col,dash,w){
+        if(!a)return"";
+        return '<path d="'+curve(a)+'" fill="none" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/>';
+      }
+      function dot(x,v,col){
+        return '<circle cx="'+x+'" cy="'+yA(v).toFixed(1)+'" r="3" fill="#fff" stroke="'+col+'" stroke-width="1.6"/>';
+      }
+      function label(x,v,col,dy){
+        return '<text x="'+x+'" y="'+(yA(v)+dy).toFixed(1)+'" font-size="10.5" font-weight="700" fill="'+col+'" text-anchor="middle">'+v+'</text>';
+      }
+      // 좌·우 모두 있을 때만 선으로 연결. 한쪽만 있으면 점만, 둘 다 없으면 아무것도 그리지 않음
+      function renderAxis(vL,vR,lineCol,labelCol,dy){
+        var g='';
+        if(vL!==null&&vR!==null){
+          g+=line([vL,vR],lineCol,0,2.4)+dot(xL,vL,lineCol)+dot(xR,vR,lineCol)+label(xL,vL,labelCol,dy)+label(xR,vR,labelCol,dy);
+        }else if(vL!==null){
+          g+=dot(xL,vL,lineCol)+label(xL,vL,labelCol,dy);
+        }else if(vR!==null){
+          g+=dot(xR,vR,lineCol)+label(xR,vR,labelCol,dy);
+        }
+        return g;
+      }
+      var svg='<svg width="100%" viewBox="0 0 '+W+' '+H+'">'+
+        '<line x1="'+padX+'" y1="'+baseY.toFixed(1)+'" x2="'+(W-padX)+'" y2="'+baseY.toFixed(1)+'" stroke="#C3C3C3" stroke-width="0.6"/>'+
+        '<text x="12" y="'+(baseY+3).toFixed(1)+'" font-size="9" fill="#7C848C">0</text>'+
+        '<line x1="'+xC+'" y1="'+plotTop+'" x2="'+xC+'" y2="'+plotBottom+'" stroke="#E6E9EF" stroke-width="0.6" stroke-dasharray="3 3"/>';
+      svg+=line(d1.ref,"#B8BEC6","5 4",1.8);
+      svg+=renderAxis(d1L,d1R,"#0B50F2","#0B50F2",-9);
+      svg+=renderAxis(d2L,d2R,"#FAB416","#C88A00",17);
+      svg+='</svg>';
+      var legend='<span class="chart-legend">'+
+        '<span><span class="ln" style="border-top-color:#0B50F2"></span>'+A1+'</span>'+
+        '<span><span class="ln" style="border-top-color:#FAB416"></span>'+A2+'</span>'+
+        '<span><span class="ln dash" style="border-top-color:#B8BEC6"></span>목표치</span>'+
+        '</span>';
+      return '<div class="chart-title"><span class="nm">조립 전 구배 값</span>'+legend+'</div>'+
+        '<div class="chart-wrap">'+svg+'<div class="axis"><span>좌</span><span>중앙 0</span><span>우</span></div></div>';
+    }
+
+    function metrics(){
+      function chg(ax,i){var d=st.data[ax];if(!d.before||!d.after)return null;return d.before[i]-d.after[i];}
+      function twist(ph,i){var a=st.data[A1][ph],b=st.data[A2][ph];if(!a||!b)return null;return a[i]-b[i];}
+      var boxes=[];
+      function pushBlk(nm,l,r,cls){
+        if(l===null&&r===null)return;
+        boxes.push('<div class="mblk '+(cls||'')+'"><div class="mn">'+nm+'</div>'+
+          '<div class="mvs"><div class="mv"><i>좌</i><b>'+fmt(l)+'</b></div>'+
+          '<div class="mv"><i>우</i><b>'+fmt(r)+'</b></div></div></div>');
+      }
+      pushBlk(A1+' 변화량',chg(A1,0),chg(A1,1),'');
+      pushBlk(A2+' 변화량',chg(A2,0),chg(A2,1),'');
+      pushBlk('꼬임 · 조립 전',twist('before',0),twist('before',1),'tw');
+      pushBlk('꼬임 · 조립 후',twist('after',0),twist('after',1),'tw');
+      if(!boxes.length)return '';
+      return '<div class="mrow">'+boxes.join('')+'</div>';
+    }
+    function updateFillStat(){
+      var total=0,filled=0;
+      axes.forEach(function(a){ ["before","after"].forEach(function(ph){ total++; if(st.data[a][ph])filled++; }); });
+      var el=document.getElementById(pfx+'-fillstat');
+      if(el) el.innerHTML=total+"개 중 <b>"+filled+"</b>개 입력됨";
+    }
+    function render(){
+      elCharts.innerHTML=drawAll()+metrics();
+      updateFillStat();
+    }
+
+    document.getElementById(pfx+'-file').addEventListener('click',function(){ openVerify(pfx); });
+
+    buildSegs();render();
+    function summary(){
+      function chg(ax){var d=st.data[ax];if(!d.before||!d.after)return null;
+        return ((d.before[0]-d.after[0])+(d.before[1]-d.after[1]))/2;}
+      var ph=(st.data[A1].after&&st.data[A2].after)?"after"
+            :((st.data[A1].before&&st.data[A2].before)?"before":null);
+      var tw=ph? ((st.data[A1][ph][0]-st.data[A2][ph][0])+(st.data[A1][ph][1]-st.data[A2][ph][1]))/2 : null;
+      return [
+        {key:A1+"_chg", nm:A1+" 변화량", val:chg(A1), mean:28, sd:9},
+        {key:A2+"_chg", nm:A2+" 변화량", val:chg(A2), mean:28, sd:9},
+        {key:"twist",   nm:"꼬임"+(ph?(ph==="after"?" (조립 후)":" (조립 전)"):""), val:tw, mean:0, sd:6}
+      ];
+    }
+    function reset(){
+      // 새 측정 시작 — 입력값·상태를 모두 비운다 (목표치는 이후 applyRef()가 다시 채움)
+      st.phase="before";
+      axes.forEach(function(a){
+        st.data[a]={before:null,after:null,ref:null};
+        st.entered[a]={before:[false,false],after:[false,false]};
+      });
+      var sw=document.getElementById(pfx+'-phase-sw');
+      sw.querySelectorAll('.opt').forEach(function(x){
+        x.classList.toggle('on',x.dataset.v==="before");
+        x.classList.remove('after');
+      });
+      buildSegs();
+      render();
+    }
+    return {
+      setRef:function(r){ axes.forEach(function(a){st.data[a].ref=r?r.slice():null;}); render(); },
+      setNA:setNA,
+      summary:summary,
+      reset:reset,
+      state:st
+    };
+  }
+
+  /* ===== 진직도 계산기 ===== */
+  function straightTool(hostEl,idp){
+    hostEl.innerHTML=
+      '<div class="card"><div class="card-h"><span class="dot"></span><h2>측정 설정</h2></div>'+
+      '<label class="f">분해능</label><select id="'+idp+'-res" style="width:100%;margin-bottom:10px">'+
+        Object.keys(RESOLUTIONS).map(function(k){return '<option value="'+k+'">'+RESOLUTIONS[k].label+'</option>';}).join('')+'</select>'+
+      '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px"><div><label class="f">수준기 길이 (mm) · 기록용</label><input type="number" id="'+idp+'-lv" value="200"></div>'+
+      '<div><label class="f">구간 간격 (mm)</label><input type="number" id="'+idp+'-pitch" value="200"></div>'+
+      '<div><label class="f">구간 수 (측정 횟수)</label><input type="number" id="'+idp+'-n" min="1" step="1" value="5"></div>'+
+      '<div><label class="f">총 측정 길이 (mm)</label><input type="number" id="'+idp+'-ml" readonly tabindex="-1"></div></div></div>'+
+
+      '<div class="card"><div class="card-h"><span class="dot"></span><h2>구간별 수준기 값</h2></div>'+
+      '<div class="notice"><span class="nic">＋</span><div>물방울이 <b>우측</b>으로 이동 → <b>＋</b> (기본)<br>'+
+      '물방울이 <b>좌측</b>으로 이동 → <b class="neg">－</b> · 부호 버튼을 눌러 전환</div></div>'+
+      '<div class="seg-scroll"><div class="seg-row" id="'+idp+'-segs"></div></div></div>'+
+
+      '<div class="card"><div class="card-h"><span class="dot"></span><h2>진직도 결과</h2>'+
+      '<span class="tag" id="'+idp+'-cntTag">— 구간</span></div>'+
+      '<div class="chart-wrap"><div id="'+idp+'-chart"></div></div>'+
+      '<div class="tbl-t">계산 표</div>'+
+      '<div class="tbl-scroll"><table class="ctab"><thead><tr>'+
+      '<th>순번</th><th>구간</th><th>측정치</th><th>누적치</th><th>보정치</th><th>누적−보정</th><th>높이차</th>'+
+      '</tr></thead><tbody id="'+idp+'-tbody"></tbody></table></div>'+
+      '<input type="hidden" id="'+idp+'-val"></div>';
+
+    var lv=document.getElementById(idp+'-lv'),ml=document.getElementById(idp+'-ml'),
+        pitch=document.getElementById(idp+'-pitch'),resEl=document.getElementById(idp+'-res'),
+        nEl=document.getElementById(idp+'-n'),segs=document.getElementById(idp+'-segs'),
+        chart=document.getElementById(idp+'-chart'),tbody=document.getElementById(idp+'-tbody'),
+        cntTag=document.getElementById(idp+'-cntTag');
+    var meas=[],pitchDirty=false;
+
+    /* 구간 길이 = 구간 간격 그대로. 총 측정 길이 = 구간 간격 × 구간 수 (표시·기록용). */
+    function curSegLen(){ return parseFloat(pitch.value)||0; }
+    function fmtLen(x){return String(Math.round(x*100)/100);}
+
+    function rebuild(){
+      var n=Math.round(parseFloat(nEl.value)),SL=curSegLen();
+      if(!(n>=1)||!SL){ml.value="";segs.innerHTML="";chart.innerHTML="";tbody.innerHTML="";cntTag.textContent="— 구간";return;}
+      ml.value=fmtLen(SL*n);cntTag.textContent=n+" 구간";
+      meas=meas.slice(0,n);while(meas.length<n)meas.push(0);
+      segs.innerHTML="";
+      for(var i=0;i<n;i++){
+        var c=document.createElement('div');c.className='seg-cell wide';
+        c.innerHTML='<div class="cl">'+fmtLen(i*SL)+'~'+fmtLen((i+1)*SL)+'</div>'+
+          '<div class="sgn-row"><button type="button" class="sgn" data-i="'+i+'">＋</button>'+
+          '<input type="number" inputmode="decimal" placeholder="–" data-i="'+i+'" value="'+(meas[i]?Math.abs(meas[i]):'')+'"></div>';
+        segs.appendChild(c);
+      }
+      segs.querySelectorAll('input').forEach(function(inp){
+        inp.addEventListener('focus',function(){ this.select(); });
+        inp.addEventListener('input',function(){
+          var i=+inp.dataset.i;
+          var mag=Math.abs(parseFloat(inp.value)||0);
+          var neg=segs.querySelector('.sgn[data-i="'+i+'"]').classList.contains('neg');
+          meas[i]=neg?-mag:mag; calc();
+        });
+      });
+      segs.querySelectorAll('.sgn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var i=+btn.dataset.i;
+          var neg=btn.classList.toggle('neg');
+          btn.textContent=neg?'－':'＋';
+          var inp=segs.querySelector('input[data-i="'+i+'"]');
+          inp.classList.toggle('neg',neg);
+          var mag=Math.abs(parseFloat(inp.value)||0);
+          meas[i]=neg?-mag:mag; calc();
+        });
+      });
+      calc();
+    }
+
+    function calc(){
+      var SL=curSegLen(),N=meas.length;
+      var d=computeDetail(meas,resEl.value,SL),h=d.h,sv=straightness(h);
+      STRAIGHT[idp]={res:resEl.value,lv:parseFloat(lv.value)||0,pitch:parseFloat(pitch.value)||0,
+        ml:parseFloat(ml.value)||0,n:N,meas:meas.slice(),sv:sv};
+      if(N<1){chart.innerHTML="";tbody.innerHTML="";return;}
+
+      var maxI=0,minI=0;
+      for(var i=1;i<h.length;i++){if(h[i]>h[maxI])maxI=i;if(h[i]<h[minI])minI=i;}
+
+      /* ---- 그래프 ---- */
+      var W=380,H=196,padL=36,padR=22,padT=32,padB=28;
+      var plotW=W-padL-padR, plotH=H-padT-padB;
+      var mx=Math.max.apply(null,h), mn=Math.min.apply(null,h);
+      if(mx===mn){mx+=1;mn-=1;}
+      var m2=(mx-mn)*0.28, yMax=mx+m2, yMin=mn-m2;
+      function xA(i){return padL+i/N*plotW;}
+      function yA(v){return padT+(1-(v-yMin)/(yMax-yMin))*plotH;}
+      var yTop=yA(h[maxI]), yBot=yA(h[minI]);
+      var flat=Math.abs(yBot-yTop)<1.5;
+      var g='';
+      if(!flat){
+        g+='<rect x="'+padL+'" y="'+yTop.toFixed(1)+'" width="'+plotW+'" height="'+(yBot-yTop).toFixed(1)+'" fill="#0B50F2" opacity="0.07"/>';
+        g+='<line x1="'+padL+'" y1="'+yTop.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yTop.toFixed(1)+'" stroke="#E24B4A" stroke-width="1" stroke-dasharray="4 3"/>';
+        g+='<line x1="'+padL+'" y1="'+yBot.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yBot.toFixed(1)+'" stroke="#E24B4A" stroke-width="1" stroke-dasharray="4 3"/>';
+      }
+      if(yMin<0&&yMax>0){
+        g+='<line x1="'+padL+'" y1="'+yA(0).toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yA(0).toFixed(1)+'" stroke="#C3C3C3" stroke-width="0.6"/>';
+        g+='<text x="'+(padL-6)+'" y="'+(yA(0)+3).toFixed(1)+'" font-size="9" fill="#7C848C" text-anchor="end">0</text>';
+      }
+      var pts=[];for(var i=0;i<=N;i++)pts.push(xA(i).toFixed(1)+','+yA(h[i]).toFixed(1));
+      g+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#0B50F2" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
+      for(var i=0;i<=N;i++){
+        var ex=!flat&&(i===maxI||i===minI);
+        g+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yA(h[i]).toFixed(1)+'" r="'+(ex?4.2:2.8)+'" fill="'+(ex?'#E24B4A':'#fff')+'" stroke="'+(ex?'#E24B4A':'#0B50F2')+'" stroke-width="1.6"/>';
+      }
+      if(!flat){
+        var anch=function(i){return i===0?'start':(i===N?'end':'middle');};
+        g+='<text x="'+xA(maxI).toFixed(1)+'" y="'+(yA(h[maxI])-9).toFixed(1)+'" font-size="10" font-weight="700" fill="#E24B4A" text-anchor="'+anch(maxI)+'">'+fmt(h[maxI])+'</text>';
+        g+='<text x="'+xA(minI).toFixed(1)+'" y="'+(yA(h[minI])+16).toFixed(1)+'" font-size="10" font-weight="700" fill="#E24B4A" text-anchor="'+anch(minI)+'">'+fmt(h[minI])+'</text>';
+        var xs=W-padR-9;
+        g+='<line x1="'+xs+'" y1="'+yTop.toFixed(1)+'" x2="'+xs+'" y2="'+yBot.toFixed(1)+'" stroke="#E24B4A" stroke-width="1.6"/>';
+        g+='<line x1="'+(xs-4)+'" y1="'+yTop.toFixed(1)+'" x2="'+(xs+4)+'" y2="'+yTop.toFixed(1)+'" stroke="#E24B4A" stroke-width="1.6"/>';
+        g+='<line x1="'+(xs-4)+'" y1="'+yBot.toFixed(1)+'" x2="'+(xs+4)+'" y2="'+yBot.toFixed(1)+'" stroke="#E24B4A" stroke-width="1.6"/>';
+      }
+      g+='<text x="'+(W-padR)+'" y="'+(padT-13)+'" font-size="11" font-weight="800" fill="#E24B4A" text-anchor="end">진직도 '+fmt(sv)+'</text>';
+      g+='<text x="'+padL+'" y="'+(padT-13)+'" font-size="10" font-weight="700" fill="#7C848C">높이차 (구간별)</text>';
+      var step=N>10?Math.ceil(N/8):1;
+      for(var i=0;i<=N;i+=step)
+        g+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-9)+'" font-size="9" fill="#7C848C" text-anchor="middle">'+i+'</text>';
+      chart.innerHTML='<svg width="100%" viewBox="0 0 '+W+' '+H+'">'+g+'</svg>';
+
+      /* ---- 계산 표 ---- */
+      var rows='';
+      for(var i=0;i<=N;i++){
+        var range=(i===0)?'0':fmtLen((i-1)*SL)+'~'+fmtLen(i*SL);
+        var mv=(i===0)?0:(meas[i-1]||0);
+        var cls=(i===0)?'base':((!flat&&(i===maxI||i===minI))?'ext':'');
+        rows+='<tr class="'+cls+'"><td>'+i+'</td><td>'+range+'</td><td>'+fmt(mv)+'</td>'+
+          '<td>'+fmt(d.cum[i])+'</td><td>'+fmt(d.cor[i])+'</td><td>'+fmt(d.dif[i])+'</td>'+
+          '<td class="hh">'+fmt(h[i])+'</td></tr>';
+      }
+      tbody.innerHTML=rows;
+    }
+    lv.addEventListener('input',function(){
+      if(!pitchDirty) pitch.value=lv.value; // 구간 간격을 직접 고친 뒤에는 덮어쓰지 않는다
+      rebuild();
+    });
+    pitch.addEventListener('input',function(){ pitchDirty=true; rebuild(); });
+    nEl.addEventListener('input',rebuild);
+    resEl.addEventListener('change',calc);
+    rebuild();
+  }
+
+  /* ===== 구글시트 전송 (데이터 축적용) ===== */
+  var SHEET_URL = "https://script.google.com/macros/s/AKfycbxmMYXSzV0F6rdcj-Wrq61yCOwFJfpeEAel61kbVhcxDiHh5qheiaFOcgtGdEtpEZ4N/exec";
+
+  function pad2(n){return n<10?"0"+n:""+n;}
+  function stamp(d){return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes());}
+  function stampShort(d){return ""+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+"-"+pad2(d.getHours())+pad2(d.getMinutes());}
+
+  // Apps Script(exec)는 CORS 미지원 → no-cors로 전송하며 응답 본문은 읽을 수 없다.
+  // 그래서 전송 성공 여부는 fetch 자체의 성공/실패(네트워크 단)로만 판단한다.
+  function sendToSheet(payload,opts){
+    var silent=opts&&opts.silent;
+    return fetch(SHEET_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)})
+      .then(function(){ if(!silent)alert("저장 완료"); return true; })
+      .catch(function(){ if(!silent)alert("저장 실패, 다시 시도"); return false; });
+  }
+
+  /* ===== 축적 데이터 기준 (배포 시 서버에서 갱신) ===== */
+  var PENDING=null;
+  var SENT=[];   // 이번 세션에 저장한 기록 (중복 확인용, 폰에 영구 저장하지 않음)
+  function dupCheck(model, unit, mark){
+    var hit=null;
+    SENT.forEach(function(r){
+      if(r.model!==model) return;
+      if(unit && r.unit && r.unit===unit) hit=r;
+      if(mark && r.mark && r.mark===mark) hit=r;
+    });
+    if(!hit) return true;
+    var who = hit.unit&&unit&&hit.unit===unit ? ("호기 "+unit) : ("각인번호 "+mark);
+    return confirm("동일한 정보가 이미 기록되었습니다.\n\n"+model+" · "+who+
+                   "\n기록 시각 "+hit.at+"\n\n재측정으로 다시 기록하시겠습니까?");
+  }
+  function markSent(model,unit,mark){
+    var t=new Date(), hh=("0"+t.getHours()).slice(-2)+":"+("0"+t.getMinutes()).slice(-2);
+    SENT.push({model:model,unit:unit||"",mark:mark||"",at:hh});
+  }
+  function bandTxt(m,sd){return fmt(m-2*sd)+"~"+fmt(m+2*sd);}
+
+  function openVerify(pfx){
+    var mark=document.getElementById(pfx+'-mark').value.trim();
+    if(!mark){ alert("각인번호는 필수입니다."); return; }
+
+    var mod=modules[pfx];
+    var items=mod.summary();
+
+    // 진직도 (있을 때만, 해당 품목의 상세계산 슬롯 우선)
+    var sv=null;
+    Object.keys(STRAIGHT).forEach(function(k){
+      var v=STRAIGHT[k];
+      if(sv===null&&v&&v.meas&&v.meas.some(function(x){return x;})) sv=v.sv;
+    });
+    items.push({key:"straight", nm:"진직도", val:sv, mean:10, sd:4});
+
+    var out=0, done=0, html="";
+    items.forEach(function(it){
+      if(it.val===null){
+        html+='<div class="vrow na"><span class="rn">'+it.nm+'</span><span class="rv">—</span>'+
+              '<span class="rr">미입력</span></div>';
+        return;
+      }
+      done++;
+      var lo=it.mean-2*it.sd, hi=it.mean+2*it.sd, ok=(it.val>=lo&&it.val<=hi);
+      if(!ok) out++;
+      html+='<div class="vrow '+(ok?'ok':'out')+'"><span class="rn">'+it.nm+'</span>'+
+            '<span class="rv">'+fmt(it.val)+'</span>'+
+            '<span class="rr">기준 '+bandTxt(it.mean,it.sd)+'</span>'+
+            '<span class="rbadge">'+(ok?'범위 내':'벗어남')+'</span></div>';
+    });
+
+    var head=document.getElementById('v-head'),
+        ic=document.getElementById('v-ic'),
+        va=document.getElementById('v-va'),
+        vb=document.getElementById('v-vb');
+    if(done===0){
+      head.className="vhead"; ic.textContent="·";
+      va.textContent="측정값 없음"; vb.textContent="측정값을 입력한 뒤 저장하세요";
+    }else if(out===0){
+      head.className="vhead ok"; ic.textContent="✓";
+      va.textContent="축적 데이터 범위 내";
+      vb.textContent=done+"개 항목 모두 정상 범위 · 조립 진행 가능";
+    }else{
+      head.className="vhead warn"; ic.textContent="!";
+      va.textContent=out+"개 항목 범위 벗어남";
+      vb.textContent="관리자 확인 후 진행 권장";
+    }
+
+    document.getElementById('v-meta').textContent=
+      CUR.vendor+" · "+CUR.model+" · "+mark+"   |   축적 124건 기준";
+    document.getElementById('v-list').innerHTML=html;
+
+    // 목표치(REF) 등록 여부만 안내 — 아래 항목별 비교는 축적 데이터 기준이라 REF 유무와 무관하게 그대로 계산됨
+    var refWarn=document.getElementById('v-refwarn');
+    if(refWarn){
+      var vendorModelsV=MASTER[CUR.vendor]||{};
+      var specV=CUR.model?vendorModelsV[CUR.model]:null;
+      refWarn.style.display=specV?'none':'block';
+    }
+
+    /* 대조립 이송레벨 예상 (연동 데이터 회귀 · 축적 시 갱신) */
+    (function(){
+      var PRED={a:8.5, b:0.86, limit:20, r:0.71, n:48};   // y = a + b·|꼬임|
+      var box=document.getElementById('v-pred');
+      var tw=null;
+      items.forEach(function(it){ if(it.key==="twist"&&it.val!==null) tw=Math.abs(it.val); });
+      if(tw===null){
+        box.className="predbox";
+        box.innerHTML='<div class="pt">대조립 이송레벨 예상</div>'+
+          '<div class="pd">꼬임 값이 없어 예상치를 산출할 수 없습니다. 조립 후 값을 입력하세요.</div>';
+        return;
+      }
+      var est=PRED.a+PRED.b*tw, over=est>PRED.limit;
+      box.className="predbox"+(over?" warn":"");
+      box.innerHTML=
+        '<div class="pt">대조립 이송레벨 예상</div>'+
+        '<div class="pmain"><span class="pv">'+fmt(est)+'</span><span class="pu">㎛ · 편차 예상</span></div>'+
+        '<div class="pbar"><i style="width:'+Math.min(100,est/(PRED.limit*1.6)*100).toFixed(0)+'%"></i></div>'+
+        '<div class="pscale"><span>0</span><span>관리 상한 '+PRED.limit+'</span><span>'+Math.round(PRED.limit*1.6)+'</span></div>'+
+        '<div class="pd">'+(over
+          ? '현재 꼬임 <b>'+fmt(tw)+'㎛</b> 기준, 대조립 이송레벨이 관리 상한 <b>'+PRED.limit+'㎛</b>를 <b>초과할 것으로 예상</b>됩니다. 조립 전 확인을 권장합니다.'
+          : '현재 꼬임 <b>'+fmt(tw)+'㎛</b> 기준, 대조립 이송레벨은 관리 상한 <b>'+PRED.limit+'㎛</b> <b>이내로 예상</b>됩니다.')+
+        '</div>'+
+        '<div class="pd" style="opacity:.7;font-size:10.5px">연동 데이터 '+PRED.n+'건 · 상관 '+PRED.r+' 기준 추정치</div>';
+    })();
+
+    PENDING=pfx;
+    document.getElementById('verify-modal').classList.add('on');
+  }
+  function closeVerify(){ document.getElementById('verify-modal').classList.remove('on'); }
+  document.getElementById('v-close').addEventListener('click',closeVerify);
+  document.getElementById('v-cancel').addEventListener('click',closeVerify);
+  document.getElementById('v-send').addEventListener('click',function(){
+    closeVerify(); if(PENDING) sendReport(PENDING);
+  });
+  document.getElementById('verify-modal').addEventListener('click',function(e){
+    if(e.target===this) closeVerify();
+  });
+
+  function partDefOf(pfx){ var d=null; PART_DEFS.forEach(function(p){ if(p.pfx===pfx) d=p; }); return d; }
+
+  function sendReport(pfx){
+    try{
+      var def=partDefOf(pfx);
+      var partName=def.name;
+      var mark=document.getElementById(pfx+'-mark').value.trim();
+      if(!mark){ alert("각인번호는 필수입니다."); return; }
+
+      // REF(구배 목표치)는 참고값일 뿐 저장 조건이 아니다 — 미등록이어도 측정값은 저장한다.
+      var vendorModels=MASTER[CUR.vendor]||{};
+      var spec=CUR.model?vendorModels[CUR.model]:null;
+      var refArr=spec&&spec[partName];
+      var ref=refLine(partName,refArr);
+      if(ref===null){
+        alert("이 품목은 \"해당 없음(X)\"으로 등록되어 있어 저장할 수 없습니다.");
+        return;
+      }
+      if(!spec){
+        var proceed=confirm("이 생산처는 목표치가 미등록입니다.\n측정값은 저장되지만 목표치 비교는 표시되지 않습니다.\n\n계속 저장하시겠습니까?");
+        if(!proceed) return;
+      }
+
+      var unitKey=(CUR.unit||"").trim(); // 비워두면 빈 값 그대로 저장(META 줄에도 그대로 반영)
+      if(!dupCheck(CUR.model, unitKey, mark)) return;
+      markSent(CUR.model, unitKey, mark);
+      var whoRaw=(CUR.who||"").trim();
+      var who=whoRaw||"미기재";
+      var now=new Date();
+
+      var st=modules[pfx].state;
+      var L=[];
+      L.push("[SELFDIAG v3]");
+      L.push(["META",CUR.vendor,CUR.model,unitKey,who,stamp(now)].join(","));
+      L.push(["PART",partName,mark].join(","));
+      def.axes.forEach(function(a){
+        ["before","after"].forEach(function(ph){
+          var d=st.data[a][ph];
+          if(d) L.push([partName,a,ph,d[0],d[1]].join(","));
+        });
+      });
+      L.push(ref);
+      var v=STRAIGHT[pfx];
+      if(v&&v.meas&&v.meas.length) L.push(["STRAIGHT",pfx,v.lv,v.ml].concat(v.meas).join(","));
+      // 신규 줄: 진직도 설정(분해능/수준기 길이/구간 간격/측정 길이/구간 수). 기존 STRAIGHT 줄은 그대로 둔다.
+      if(v&&v.meas&&v.meas.length) L.push(["STRAIGHTCFG",pfx,v.res,v.lv,v.pitch,v.ml,v.n].join(","));
+      L.push("[END]");
+
+      var body=L.join("\n");
+      console.log("[SELFDIAG v3] "+partName+" 전송 원본:\n"+body);
+      var subject="[진단] "+CUR.vendor+"/"+CUR.model+"/"+partName+"/"+mark+"/"+stampShort(now);
+      sendToSheet({
+        종류:"SELFDIAG",
+        제목:subject,
+        원본:body,
+        업체:CUR.vendor,
+        기종명:CUR.model,
+        각인번호:mark,
+        호기:unitKey,
+        측정자:who,
+        측정시각:stamp(now),
+        전송시각:now.toISOString()
+      }).then(function(ok){
+        if(ok){
+          markPartSent(partName,mark);
+          upsertRecent(partName,mark);
+          saveLastWorker(whoRaw);
+          showPanel('cards');
+          renderCards();
+          flashCard(partName);
+        }
+      });
+    }catch(err){
+      console.error("[SELFDIAG] sendReport 오류:",err);
+      alert("저장 실패: 예상치 못한 오류가 발생했습니다.\n\n"+(err&&err.message?err.message:err));
+    }
+  }
+
+  /* =========================================================
+     HE 라인 측정 화면 — VMCT의 makeModule/drawAll/sendReport와는
+     완전히 별개의 구현. 조립 전/후 탭이 없고, 측정점 3개(첫 점은 0 고정)를
+     L·R 두 줄로 재는 인디게이터 방식이라 겸용하지 않는다.
+     ========================================================= */
+  var HE_STATE={};       // 품목명 → {mark, L:[pt1,pt2], R:[pt1,pt2], enteredL:[bool,bool], enteredR:[bool,bool]}
+  var HE_CURRENT_PART=null;
+  function heStateFor(part){
+    if(!HE_STATE[part]) HE_STATE[part]={mark:'',L:[null,null],R:[null,null],enteredL:[false,false],enteredR:[false,false]};
+    return HE_STATE[part];
+  }
+
+  function openHEPart(part){
+    HE_CURRENT_PART=part;
+    renderHEPanel(part);
+    showPanel('he');
+  }
+
+  function heCellHTML(side,pt,target){
+    var st=heStateFor(HE_CURRENT_PART);
+    var arr = side==='L' ? st.L : st.R;
+    var entered = side==='L' ? st.enteredL : st.enteredR;
+    var v = entered[pt] ? arr[pt] : '';
+    return '<div class="he-cell"><div class="he-cell-row">'+
+      '<input type="number" inputmode="decimal" data-side="'+side+'" data-pt="'+pt+'" placeholder="–" value="'+v+'">'+
+      signBtnHTML('data-sign-side="'+side+'" data-sign-pt="'+pt+'"')+
+      '</div><div class="he-target">목표 '+fmtHE(target)+'μm</div></div>';
+  }
+
+  function renderHEPanel(part){
+    var spec=getHESpec(CUR.vendor,CUR.model);
+    document.getElementById('he-part-title').textContent=part+' 측정';
+    document.getElementById('he-mark').value=heStateFor(part).mark;
+    if(!spec){
+      document.getElementById('he-dist-label').textContent='목표치를 아직 불러오지 못했습니다';
+      document.getElementById('he-segs').innerHTML='';
+      document.getElementById('he-charts').innerHTML='';
+      return;
+    }
+    var s0=spec.sections[0], s1=spec.sections[1];
+    document.getElementById('he-dist-label').textContent=
+      s0.distStart+'mm — '+s0.name+' — '+s0.distEnd+'mm — '+s1.name+' — '+s1.distEnd+'mm';
+
+    var html='<div class="he-grid">'+
+      '<div></div><div class="he-pt-head">0 셋팅</div>'+
+      '<div class="he-pt-head">'+escapeHTML(s0.name)+'</div>'+
+      '<div class="he-pt-head">'+escapeHTML(s1.name)+'</div>'+
+      '<div class="he-rowlabel">L</div><div class="he-fixed">0</div>'+heCellHTML('L',0,s0.L)+heCellHTML('L',1,s1.L)+
+      '<div class="he-rowlabel">R</div><div class="he-fixed">0</div>'+heCellHTML('R',0,s0.R)+heCellHTML('R',1,s1.R)+
+      '</div>';
+    document.getElementById('he-segs').innerHTML=html;
+
+    document.querySelectorAll('#he-segs input').forEach(function(inp){
+      inp.setAttribute('inputmode','decimal');
+      inp.addEventListener('focus',function(){ this.select(); });
+      inp.addEventListener('input',function(e){
+        var side=e.target.dataset.side, pt=+e.target.dataset.pt;
+        var st=heStateFor(part);
+        var arr = side==='L' ? st.L : st.R;
+        var entered = side==='L' ? st.enteredL : st.enteredR;
+        var val=parseFloat(e.target.value);
+        arr[pt]=isNaN(val)?0:val;
+        entered[pt]=(e.target.value!=='');
+        renderHEChart(part);
+        updateHEFillStat(part);
+      });
+      var btn=inp.parentElement.querySelector('.signbtn');
+      if(btn){
+        wireSignBtn(btn,inp);
+        inp.addEventListener('input',function(){ refreshSignBtn(btn,inp); });
+        refreshSignBtn(btn,inp);
+      }
+    });
+
+    renderHEChart(part);
+    updateHEFillStat(part);
+  }
+
+  document.getElementById('he-mark').addEventListener('input',function(){
+    if(HE_CURRENT_PART) heStateFor(HE_CURRENT_PART).mark=this.value;
+  });
+
+  function updateHEFillStat(part){
+    var st=heStateFor(part);
+    var total=4, filled=0;
+    st.enteredL.forEach(function(b){ if(b) filled++; });
+    st.enteredR.forEach(function(b){ if(b) filled++; });
+    var el=document.getElementById('he-fillstat');
+    if(el) el.innerHTML=total+"개 중 <b>"+filled+"</b>개 입력됨";
+  }
+
+  // VMCT의 역포물선 그래프(drawAll)를 재사용하지 않고, 3점을 잇는 단순 꺾은선을 새로 그린다.
+  // 목표가 음수(DVF5000/DVF4000)든 양수(DVF6500)든 그대로 그려지도록 방향을 고정하지 않는다.
+  function heDrawChart(part){
+    var spec=getHESpec(CUR.vendor,CUR.model);
+    if(!spec) return '';
+    var s0=spec.sections[0], s1=spec.sections[1];
+    var st=heStateFor(part);
+
+    function ptVal(arr,entered,i){ return entered[i] ? arr[i] : null; }
+    var L1=ptVal(st.L,st.enteredL,0), L2=ptVal(st.L,st.enteredL,1);
+    var R1=ptVal(st.R,st.enteredR,0), R2=ptVal(st.R,st.enteredR,1);
+    if(L1===null&&L2===null&&R1===null&&R2===null) return ''; // 값이 하나도 없으면 영역 자체를 숨김 (VMCT와 동일 규칙)
+
+    var W=380,H=164,padX=36,plotTop=18,plotBottom=146;
+    var xL=padX,xR=W-padX;
+    var d0=0,d1=s0.distEnd,d2=s1.distEnd;
+    function xAt(d){ return xL+(d-d0)/((d2-d0)||1)*(xR-xL); }
+    var x0=xAt(d0), x1=xAt(d1), x2=xAt(d2);
+
+    var vals=[0];
+    [L1,L2,R1,R2].forEach(function(v){ if(v!==null) vals.push(v); });
+    var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
+    if(minV===maxV){ minV-=10; maxV+=10; }
+    var pad=(maxV-minV)*0.2;
+    minV-=pad; maxV+=pad;
+    var scale=(plotBottom-plotTop)/(maxV-minV);
+    function yAt(v){ return plotBottom-(v-minV)*scale; } // 0이 축 중앙 부근에 오도록 자동 스케일 — 위아래 방향 고정 없음
+
+    function seg(xa,ya,xb,yb,col){
+      return '<line x1="'+xa.toFixed(1)+'" y1="'+ya.toFixed(1)+'" x2="'+xb.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="'+col+'" stroke-width="2.4" stroke-linecap="round"/>';
+    }
+    function dot(x,y,col){
+      return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#fff" stroke="'+col+'" stroke-width="1.6"/>';
+    }
+    function label(x,y,v,col,dy){
+      return '<text x="'+x.toFixed(1)+'" y="'+(y+dy).toFixed(1)+'" font-size="10.5" font-weight="700" fill="'+col+'" text-anchor="middle">'+v+'</text>';
+    }
+    function lineFor(v1,v2,col,labelCol,dy){
+      var g='', y0=yAt(0);
+      g+=dot(x0,y0,col); // 0 셋팅 지점은 항상 표시
+      if(v1!==null){
+        var y1=yAt(v1);
+        g+=seg(x0,y0,x1,y1,col)+dot(x1,y1,col)+label(x1,y1,v1,labelCol,dy);
+        if(v2!==null){
+          var y2=yAt(v2);
+          g+=seg(x1,y1,x2,y2,col)+dot(x2,y2,col)+label(x2,y2,v2,labelCol,dy);
+        }
+      }
+      return g;
+    }
+
+    var baseY=yAt(0);
+    var svg='<svg width="100%" viewBox="0 0 '+W+' '+H+'">'+
+      '<line x1="'+xL+'" y1="'+baseY.toFixed(1)+'" x2="'+xR+'" y2="'+baseY.toFixed(1)+'" stroke="#C3C3C3" stroke-width="0.6"/>'+
+      '<text x="12" y="'+(baseY+3).toFixed(1)+'" font-size="9" fill="#7C848C">0</text>';
+    svg+=lineFor(L1,L2,"#0B50F2","#0B50F2",-9);
+    svg+=lineFor(R1,R2,"#FAB416","#C88A00",17);
+    svg+='</svg>';
+    var legend='<span class="chart-legend">'+
+      '<span><span class="ln" style="border-top-color:#0B50F2"></span>L</span>'+
+      '<span><span class="ln" style="border-top-color:#FAB416"></span>R</span>'+
+      '</span>';
+    return '<div class="chart-title"><span class="nm">구배 형상 (μm)</span>'+legend+'</div>'+
+      '<div class="chart-wrap">'+svg+'</div>';
+  }
+  function renderHEChart(part){
+    var el=document.getElementById('he-charts');
+    if(el) el.innerHTML=heDrawChart(part);
+  }
+
+  document.getElementById('he-file').addEventListener('click',function(){ sendHEReport(HE_CURRENT_PART); });
+
+  function sendHEReport(part){
+    try{
+      if(!part) return;
+      var mark=document.getElementById('he-mark').value.trim();
+      if(!mark){ alert("각인번호는 필수입니다."); return; }
+      var heSpec=getHESpec(CUR.vendor,CUR.model);
+      if(!heSpec){
+        alert("목표치 정보를 아직 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+        return;
+      }
+      var unitKey=(CUR.unit||"").trim();
+      if(!dupCheck(CUR.model, unitKey, mark)) return;
+      markSent(CUR.model, unitKey, mark);
+      var whoRaw=(CUR.who||"").trim();
+      var who=whoRaw||"미기재";
+      var now=new Date();
+
+      var st=heStateFor(part);
+      var s0=heSpec.sections[0], s1=heSpec.sections[1];
+      function fieldOf(arr,entered,i){ return entered[i] ? arr[i] : ''; }
+
+      var L=[];
+      L.push("[SELFDIAG v3]");
+      L.push(["META",CUR.vendor,CUR.model,unitKey,who,stamp(now)].join(","));
+      L.push(["PART",part,mark].join(","));
+      if(st.enteredL[0]||st.enteredL[1]){
+        L.push(["HE","L","0",fieldOf(st.L,st.enteredL,0),fieldOf(st.L,st.enteredL,1)].join(","));
+      }
+      if(st.enteredR[0]||st.enteredR[1]){
+        L.push(["HE","R","0",fieldOf(st.R,st.enteredR,0),fieldOf(st.R,st.enteredR,1)].join(","));
+      }
+      L.push(["REF","HE",s0.name,s0.distStart,s0.distEnd,s0.L,s0.R].join(","));
+      L.push(["REF","HE",s1.name,s1.distStart,s1.distEnd,s1.L,s1.R].join(","));
+      L.push("[END]");
+
+      var body=L.join("\n");
+      console.log("[SELFDIAG v3] HE/"+part+" 전송 원본:\n"+body);
+      var subject="[진단] "+CUR.vendor+"/"+CUR.model+"/"+part+"/"+mark+"/"+stampShort(now);
+      sendToSheet({
+        종류:"SELFDIAG", 제목:subject, 원본:body,
+        업체:CUR.vendor, 기종명:CUR.model, 각인번호:mark, 호기:unitKey,
+        측정자:who, 측정시각:stamp(now), 전송시각:now.toISOString()
+      }).then(function(ok){
+        if(ok){
+          markPartSent(part,mark);
+          upsertRecent(part,mark);
+          saveLastWorker(whoRaw);
+          showPanel('cards');
+          renderCards();
+          flashCard(part);
+        }
+      });
+    }catch(err){
+      console.error("[HE] sendHEReport 오류:",err);
+      alert("저장 실패: 예상치 못한 오류가 발생했습니다.\n\n"+(err&&err.message?err.message:err));
+    }
+  }
+
+  /* 접이식 (진직도 상세계산) */
+  document.querySelectorAll('.collapse-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var body=document.getElementById(btn.dataset.target+'-body');
+      var open=body.classList.toggle('open');btn.classList.toggle('open',open);
+      if(open&&!body.dataset.built){straightTool(body,btn.dataset.target);body.dataset.built="1";}
+    });
+  });
+
+  PART_DEFS.forEach(function(p){ modules[p.pfx]=makeModule(p.pfx,p.axes); });
+  straightTool(document.getElementById('i-tool'),'i');
+
+  /* 진단 패널 토글 — 평소 사용엔 방해되지 않도록 기본은 접힌 상태 */
+  document.getElementById('diag-fab').addEventListener('click',function(){
+    document.getElementById('diag-panel').classList.add('open');
+    renderDiag();
+  });
+  document.getElementById('diag-close').addEventListener('click',function(){
+    document.getElementById('diag-panel').classList.remove('open');
+  });
+  renderDiag();
+
+  /* ===== 이송레벨 (대조립 정도조정 전) — 호기/기종/측정자는 상위 공용 선택값을 그대로 사용 ===== */
+  (function(){
+    var LV={X:new Array(9).fill(null), Y:new Array(9).fill(null)};
+    var grid=document.getElementById('v-grid'), view=document.getElementById('v-view');
+
+    var DIRS={X:["→","←"], Y:["↑","↓"]};
+    var dirState={X:new Array(9).fill(null), Y:new Array(9).fill(null)};
+
+    function build(){
+      grid.innerHTML="";
+      for(var i=0;i<9;i++){
+        var c=document.createElement('div');
+        c.className='gcell'+(i===4?' center':'');
+        var rows='<div class="u ux"><b>X</b><div class="inrow">'+
+          '<button type="button" class="dirbtn" data-d="X" data-i="'+i+'">·</button>'+
+          '<input type="number" inputmode="decimal" placeholder="–" data-d="X" data-i="'+i+'"></div></div>'+
+          '<div class="u uy"><b>Y</b><div class="incol">'+
+          '<button type="button" class="dirbtn" data-d="Y" data-i="'+i+'">·</button>'+
+          '<input type="number" inputmode="decimal" placeholder="–" data-d="Y" data-i="'+i+'"></div></div>';
+        c.innerHTML='<div class="gxy">'+rows+'</div>';
+        grid.appendChild(c);
+      }
+      grid.querySelectorAll('input').forEach(function(inp){
+        inp.addEventListener('focus',function(){this.select();});
+        inp.addEventListener('input',commit);
+      });
+      grid.querySelectorAll('.dirbtn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          // 3단계 순환: 없음 → 방향1 → 방향2 → 없음 → ... (잘못 눌러도 "없음"으로 되돌릴 수 있어야 함)
+          var d=btn.dataset.d, i=+btn.dataset.i, cur=dirState[d][i];
+          dirState[d][i] = (cur===null) ? 0 : (cur===0 ? 1 : null);
+          commit();
+        });
+      });
+    }
+
+    function commit(){
+      grid.querySelectorAll('input').forEach(function(inp){
+        var i=+inp.dataset.i, d=inp.dataset.d;
+        var mag = inp.value===""? null : Math.abs(parseFloat(inp.value)||0);
+        if(mag===0){ dirState[d][i]=null; LV[d][i]=0; return; }   // 0 = 부호 없음
+        var di = dirState[d][i];
+        LV[d][i] = (mag===null||di===null) ? null : (di===0 ? mag : -mag);
+      });
+      grid.querySelectorAll('.dirbtn').forEach(function(btn){
+        var d=btn.dataset.d, i=+btn.dataset.i, di=dirState[d][i];
+        var inp=grid.querySelector('input[data-d="'+d+'"][data-i="'+i+'"]');
+        var val = inp && inp.value!=="" ? Math.abs(parseFloat(inp.value)||0) : null;
+        btn.classList.remove('set','need','zero');
+        btn.disabled = (val===0);
+        if(val===0){ btn.textContent="–"; btn.classList.add('zero'); }
+        else if(di!==null){ btn.textContent=DIRS[d][di]; btn.classList.add('set'); }
+        else { btn.textContent="·"; if(val!==null) btn.classList.add('need'); }
+      });
+      render();
+    }
+
+    function render(){
+      function span(k){
+        var a=LV[k].filter(function(v){return v!==null;});
+        return a.length? Math.max.apply(null,a)-Math.min.apply(null,a) : null;
+      }
+      var sx=span("X"), sy=span("Y");
+      view.innerHTML='<div class="lvmax">'+
+        '<div class="b"><div class="l">X 편차</div><div class="v">'+(sx!==null?fmt(sx):"—")+'<small style="font-size:10px;color:var(--gray)"> ㎛</small></div></div>'+
+        '<div class="b"><div class="l">Y 편차</div><div class="v">'+(sy!==null?fmt(sy):"—")+'<small style="font-size:10px;color:var(--gray)"> ㎛</small></div></div>'+
+        '</div>';
+    }
+
+    document.getElementById('v-file').addEventListener('click',function(){
+      var unit=(CUR.unit||"").trim();
+      if(!unit){ alert("호기는 필수입니다. 대물 정보에서 호기를 입력하세요."); return; }
+      var pend=grid.querySelectorAll('.dirbtn.need').length;
+      if(pend){ alert("방향이 지정되지 않은 값이 "+pend+"개 있습니다.\n화살표를 눌러 방향을 정해주세요."); return; }
+      var model=CUR.model||"";
+      var whoRaw=(CUR.who||"").trim();
+      var who=whoRaw||"미기재";
+      if(!dupCheck(model, unit, "")) return;
+      markSent(model, unit, "");
+      var now=new Date(), L=[];
+      L.push("[LEVEL v3]");
+      L.push(["META",CUR.vendor,model,unit,who,stamp(now)].join(",")); // 각인번호 대신 호기를 연결 키로 사용
+      ["X","Y"].forEach(function(k){
+        L.push(["LEVEL",k,"before"].concat(LV[k].map(function(v){return v===null?"":v;})).join(","));
+      });
+      L.push("[END]");
+      var subject="[이송레벨] "+CUR.vendor+"/"+model+"/"+unit+"/"+stampShort(now);
+      sendToSheet({
+        종류:"LEVEL",
+        제목:subject,
+        원본:L.join("\n"),
+        업체:CUR.vendor,
+        기종명:model,
+        각인번호:"",
+        호기:unit,
+        측정자:who,
+        측정시각:stamp(now),
+        전송시각:now.toISOString()
+      }).then(function(ok){
+        if(ok){ markPartSent("LEVEL",""); upsertRecent("LEVEL",""); saveLastWorker(whoRaw); showPanel('cards'); renderCards(); flashCard("LEVEL"); }
+      });
+    });
+
+    window.__lvFillModels=function(){ /* 기종은 상위 공용 선택을 그대로 사용 — 별도 목록 불필요 */ };
+    build(); render();
+  })();
+
+  function escapeHTML(str){
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+})();
+</script>
+</body>
+</html>
