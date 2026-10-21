@@ -1492,7 +1492,21 @@
     return {cum:cum,cor:cor,dif:dif,h:h,um:um};
   }
 
-    /* 측정 설정(분해능/수준기 길이/구간 간격/구간 수/측정 길이) — 진직도 계산기와 HE 화면이 같이 쓴다.
+    /* HE(인디게이터) 전용 누적·진직 — 1구간 자리에서 게이지를 0으로 맞추고 시작하므로 1구간 값이 곧 출발점이다.
+     점은 구간 수 n개 (앞에 0을 따로 붙이지 않는다):
+       점[0] = 1구간 값(항상 0), 점[i] = 1구간부터 i+1구간까지의 누적 합.
+     진직 = 점[0]과 점[n-1]을 잇는 직선(분모 n-1)에서 각 점의 편차의 최대−최소. 구배 = 누적 합(마지막 점).
+     같은 식이 dashboard.py의 compute_he에도 있다. 진직도 계산기(VMCT용, computeDetail)와는 별개. */
+  function computeHEProfile(vals){
+    var n=vals.length,pts=[],acc=0;
+    for(var i=0;i<n;i++){acc+=(vals[i]||0);pts.push(acc);}
+    if(n<2) return {pts:pts,grad:acc,str:0};
+    var slope=(pts[n-1]-pts[0])/(n-1),mx=-Infinity,mn=Infinity;
+    for(var i=0;i<n;i++){var d=pts[i]-pts[0]-slope*i;if(d>mx)mx=d;if(d<mn)mn=d;}
+    return {pts:pts,grad:pts[n-1],str:mx-mn};
+  }
+
+  /* 측정 설정(분해능/수준기 길이/구간 간격/구간 수/측정 길이) — 진직도 계산기와 HE 화면이 같이 쓴다.
      구간 간격·구간 수·측정 길이는 모두 입력 가능하며, 마지막에 고친 값이 우선(방금 입력한 칸은 덮어쓰지 않음):
        간격/구간 수를 고치면 측정 길이 = 간격 × 구간 수,  측정 길이를 고치면 간격 = 측정 길이 ÷ 구간 수(구간 수 유지).
      자동으로 계산된 칸은 옅은 색 + "자동" 표시. */
@@ -2199,13 +2213,13 @@
     if(el) el.innerHTML=total+"개 중 <b>"+filled+"</b>개 입력됨";
   }
 
-  // 입력값(μm)은 환산 없이 그대로 쓴다. 누적·진직은 진직도 계산기와 같은 computeDetail(…,"um",…) 사용.
+  // 입력값(μm)은 환산 없이 그대로 쓴다. 누적·진직은 computeHEProfile (n개 점, 앞에 0을 붙이지 않음).
   function heSideCalc(part,side){
     var st=heStateFor(part), arr=st[side], en=st['entered'+side];
     var last=-1; en.forEach(function(b,i){ if(b) last=i; });
     if(last<0) return null;
-    var d=computeDetail(arr,"um",HE_SETUP?HE_SETUP.segLen():0);
-    return {d:d,last:last,cum:d.cum[d.cum.length-1],str:straightness(d.um)};
+    var pf=computeHEProfile(arr);
+    return {pts:pf.pts,last:last,cum:pf.grad,str:pf.str};
   }
 
   // 구배 형상 하나만: 입력값의 누적 합을 L·R 두 줄로 연결
@@ -2217,9 +2231,9 @@
     var n=HE_SETUP.count(), pitch=HE_SETUP.segLen();
 
     var W=380,H=176,padL=36,padR=20,plotTop=22,plotBottom=150;
-    function xAt(i){ return padL+i/(n||1)*(W-padL-padR); }
+    function xAt(i){ return padL+i/Math.max(1,n-1)*(W-padL-padR); }
     var vals=[0];
-    ['L','R'].forEach(function(s){ if(c[s]) for(var i=0;i<=c[s].last+1;i++) vals.push(c[s].d.cum[i]); });
+    ['L','R'].forEach(function(s){ if(c[s]) for(var i=0;i<=c[s].last;i++) vals.push(c[s].pts[i]); });
     var minV=Math.min.apply(null,vals), maxV=Math.max.apply(null,vals);
     if(minV===maxV){ minV-=10; maxV+=10; }
     var pad=(maxV-minV)*0.2; minV-=pad; maxV+=pad;
@@ -2228,12 +2242,12 @@
     function lineFor(cs,col,labelCol,dy){
       if(!cs) return '';
       var pts=[],g='';
-      for(var i=0;i<=cs.last+1;i++) pts.push(xAt(i).toFixed(1)+','+yAt(cs.d.cum[i]).toFixed(1));
+      for(var i=0;i<=cs.last;i++) pts.push(xAt(i).toFixed(1)+','+yAt(cs.pts[i]).toFixed(1));
       g+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
-      for(var i=0;i<=cs.last+1;i++){
-        var x=xAt(i),y=yAt(cs.d.cum[i]);
+      for(var i=0;i<=cs.last;i++){
+        var x=xAt(i),y=yAt(cs.pts[i]);
         g+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#fff" stroke="'+col+'" stroke-width="1.6"/>';
-        if(i>0) g+='<text x="'+x.toFixed(1)+'" y="'+(y+dy).toFixed(1)+'" font-size="10" font-weight="700" fill="'+labelCol+'" text-anchor="middle">'+fmt(cs.d.cum[i])+'</text>';
+        if(i>0||cs.pts[i]!==0) g+='<text x="'+x.toFixed(1)+'" y="'+(y+dy).toFixed(1)+'" font-size="10" font-weight="700" fill="'+labelCol+'" text-anchor="middle">'+fmt(cs.pts[i])+'</text>';
       }
       return g;
     }
@@ -2244,8 +2258,8 @@
     svg+=lineFor(c.L,"#0B50F2","#0B50F2",-9);
     svg+=lineFor(c.R,"#FAB416","#C88A00",17);
     var step=n>10?Math.ceil(n/8):1;
-    for(var i=0;i<=n;i+=step)
-      svg+='<text x="'+xAt(i).toFixed(1)+'" y="'+(H-8)+'" font-size="9" fill="#7C848C" text-anchor="middle">'+fmtLen(i*pitch)+'</text>';
+    for(var i=0;i<n;i+=step)   // 점 i = (i+1)구간 자리
+      svg+='<text x="'+xAt(i).toFixed(1)+'" y="'+(H-8)+'" font-size="9" fill="#7C848C" text-anchor="middle">'+fmtLen((i+1)*pitch)+'</text>';
     svg+='</svg>';
     var legend='<span class="chart-legend">'+
       '<span><span class="ln" style="border-top-color:#0B50F2"></span>L</span>'+
