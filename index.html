@@ -197,7 +197,19 @@
   /* ===== HE 라인 전용 위젯 (VMCT의 axis-block/mcell과 별개 — 겸용하지 않음) ===== */
   .he-distbar{margin-top:9px;background:var(--paper);border-radius:var(--r-sm);padding:9px 11px;
     font-size:11.5px;color:var(--gray);font-weight:600;text-align:center;}
-  .he-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px 4px;align-items:start;}
+  /* 세로 입력 표 (진직도 계산기·HE 공용) — 한 줄에 한 구간, 가로 스크롤 없음 */
+  .vt-row{display:grid;grid-template-columns:24px 44px repeat(var(--cols,1),minmax(0,1fr));gap:4px;align-items:center;margin-bottom:5px;}
+  .vt-head{font-size:10.5px;color:var(--gray);font-weight:700;text-align:center;margin-bottom:6px;}
+  .vt-n{text-align:center;font-weight:800;color:var(--dgray);font-size:13px;}
+  .vt-d{text-align:center;font-size:11px;color:var(--gray);font-weight:600;white-space:nowrap;}
+  .vt-cell{display:flex;gap:3px;min-width:0;}
+  .vt-cell input{flex:1;min-width:0;width:100%;height:40px;text-align:center;font-size:16px;font-weight:700;padding:0 2px;}
+  .vt-cell input.neg{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+  input.auto{background:var(--paper);color:var(--gray);}
+  .auto-tag{font-size:9.5px;font-weight:700;color:var(--blue);background:var(--blue-soft);border-radius:8px;padding:1px 6px;margin-left:2px;}
+  .auto-tag[hidden]{display:none;}
+  #he-charts{min-height:190px;} #he-result{min-height:96px;}
+  .he-empty{font-size:12px;color:var(--lgray);text-align:center;padding:70px 0;}  .he-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px 4px;align-items:start;}
   .he-side{font-size:13px;font-weight:800;color:var(--dgray);margin:12px 0 6px;}
   .he-side:first-child{margin-top:0;}
   .he-targetline{margin-top:9px;font-size:13px;font-weight:700;color:var(--navy);display:flex;gap:14px;flex-wrap:wrap;}
@@ -994,7 +1006,7 @@
       if(CUR.vendor){
         fillModels(CUR.vendor);
         renderCards();
-        if(HE_CURRENT_PART) renderHEPanel(HE_CURRENT_PART);
+        if(HE_CURRENT_PART && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#panel-part-he'))) renderHEPanel(HE_CURRENT_PART); // 입력 중이면 다시 그리지 않는다
         checkCollapse();
       }
     }).catch(function(err){
@@ -1480,38 +1492,87 @@
     return {cum:cum,cor:cor,dif:dif,h:h,um:um};
   }
 
-  /* 측정 설정(분해능/수준기 길이/구간 간격/구간 수/총 길이) — 진직도 계산기와 HE 화면이 같이 쓴다 */
+    /* 측정 설정(분해능/수준기 길이/구간 간격/구간 수/측정 길이) — 진직도 계산기와 HE 화면이 같이 쓴다.
+     구간 간격·구간 수·측정 길이는 모두 입력 가능하며, 마지막에 고친 값이 우선(방금 입력한 칸은 덮어쓰지 않음):
+       간격/구간 수를 고치면 측정 길이 = 간격 × 구간 수,  측정 길이를 고치면 간격 = 측정 길이 ÷ 구간 수(구간 수 유지).
+     자동으로 계산된 칸은 옅은 색 + "자동" 표시. */
   function setupHTML(idp,init){
     init=init||{};
     var res=init.res||"0.02/m",lv=init.lv==null?200:init.lv,pitch=init.pitch==null?lv:init.pitch,n=init.n==null?5:init.n;
+    var ml=init.ml!=null?init.ml:(pitch*n);
+    var auto=init.auto||'ml';
+    function lab(txt,id,which){ return '<label class="f">'+txt+' <span class="auto-tag" id="'+idp+'-'+id+'-auto"'+(auto===which?'':' hidden')+'>자동</span></label>'; }
     return '<label class="f">분해능</label><select id="'+idp+'-res" style="width:100%;margin-bottom:10px">'+
       Object.keys(RESOLUTIONS).map(function(k){return '<option value="'+k+'"'+(k===res?' selected':'')+'>'+RESOLUTIONS[k].label+'</option>';}).join('')+'</select>'+
-      '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px"><div><label class="f">수준기 길이 (mm) · 기록용</label><input type="number" id="'+idp+'-lv" value="'+lv+'"></div>'+
-      '<div><label class="f">구간 간격 (mm)</label><input type="number" id="'+idp+'-pitch" value="'+pitch+'"></div>'+
-      '<div><label class="f">구간 수 (측정 횟수)</label><input type="number" id="'+idp+'-n" min="1" step="1" value="'+n+'"></div>'+
-      '<div><label class="f">총 측정 길이 (mm)</label><input type="number" id="'+idp+'-ml" readonly tabindex="-1"></div></div>';
+      '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px"><div><label class="f">수준기 길이 (mm) · 기록용</label><input type="number" inputmode="decimal" id="'+idp+'-lv" value="'+lv+'"></div>'+
+      '<div>'+lab('구간 간격 (mm)','pitch','pitch')+'<input type="number" inputmode="decimal" id="'+idp+'-pitch" class="'+(auto==='pitch'?'auto':'')+'" value="'+pitch+'"></div>'+
+      '<div><label class="f">구간 수 (측정 횟수)</label><input type="number" inputmode="numeric" id="'+idp+'-n" min="1" step="1" value="'+n+'"></div>'+
+      '<div>'+lab('측정 길이 (mm)','ml','ml')+'<input type="number" inputmode="decimal" id="'+idp+'-ml" class="'+(auto==='ml'?'auto':'')+'" value="'+fmtLen(ml)+'"></div></div>';
   }
   function fmtLen(x){return String(Math.round(x*100)/100);}
-  /* onRebuild: 간격/구간 수/수준기 길이가 바뀔 때, onCalc: 분해능만 바뀔 때 */
+  /* onRebuild: 간격/구간 수/측정 길이/수준기 길이가 바뀔 때, onCalc: 분해능만 바뀔 때 */
   function wireSetup(idp,init,onRebuild,onCalc){
     var S={res:document.getElementById(idp+'-res'),lv:document.getElementById(idp+'-lv'),
-      pitch:document.getElementById(idp+'-pitch'),n:document.getElementById(idp+'-n'),ml:document.getElementById(idp+'-ml')};
+      pitch:document.getElementById(idp+'-pitch'),n:document.getElementById(idp+'-n'),ml:document.getElementById(idp+'-ml'),
+      pitchTag:document.getElementById(idp+'-pitch-auto'),mlTag:document.getElementById(idp+'-ml-auto'),auto:(init&&init.auto)||'ml'};
     var pitchDirty=!!init&&init.pitch!=null&&init.lv!=null&&String(init.pitch)!==String(init.lv);
     S.segLen=function(){return parseFloat(S.pitch.value)||0;}; // 높이차 계산의 구간 길이 = 구간 간격 그대로
     S.count=function(){var n=Math.round(parseFloat(S.n.value));return n>=1?n:0;};
-    S.refresh=function(){var n=S.count(),p=S.segLen();S.ml.value=(n&&p)?fmtLen(p*n):"";};
-    S.read=function(){return {res:S.res.value,lv:parseFloat(S.lv.value)||0,pitch:S.segLen(),n:S.count(),ml:parseFloat(S.ml.value)||0};};
+    S.read=function(){return {res:S.res.value,lv:parseFloat(S.lv.value)||0,pitch:S.segLen(),n:S.count(),
+      ml:parseFloat(S.ml.value)||0,auto:S.auto};};
+    function mark(which){
+      S.auto=which;
+      S.ml.classList.toggle('auto',which==='ml'); S.mlTag.hidden=(which!=='ml');
+      S.pitch.classList.toggle('auto',which==='pitch'); S.pitchTag.hidden=(which!=='pitch');
+    }
+    function mlFromPitch(){ var n=S.count(),p=S.segLen(); S.ml.value=(n&&p)?fmtLen(p*n):""; mark('ml'); }
     S.lv.addEventListener('input',function(){
-      if(!pitchDirty) S.pitch.value=S.lv.value; // 구간 간격을 직접 고친 뒤에는 덮어쓰지 않는다
-      S.refresh(); onRebuild();
+      if(pitchDirty) return;                 // 구간 간격을 직접 고친 뒤에는 덮어쓰지 않는다
+      S.pitch.value=S.lv.value; mlFromPitch(); onRebuild();
     });
-    S.pitch.addEventListener('input',function(){ pitchDirty=true; S.refresh(); onRebuild(); });
-    S.n.addEventListener('input',function(){ S.refresh(); onRebuild(); });
+    S.pitch.addEventListener('input',function(){ pitchDirty=true; mlFromPitch(); onRebuild(); });
+    S.n.addEventListener('input',function(){ mlFromPitch(); onRebuild(); });
+    S.ml.addEventListener('input',function(){
+      pitchDirty=true;
+      var n=S.count(),m=parseFloat(S.ml.value);
+      if(n&&m>0) S.pitch.value=String(Math.round(m/n*1000)/1000); // 구간 수는 그대로
+      mark('pitch'); onRebuild();
+    });
     S.res.addEventListener('change',onCalc);
-    S.refresh();
+    mark(S.auto);
     return S;
   }
-  function straightness(h){var mx=h[0],mn=h[0];for(var i=1;i<h.length;i++){if(h[i]>mx)mx=h[i];if(h[i]<mn)mn=h[i];}return mx-mn;}
+
+  /* 세로 입력 표 — 한 줄에 한 구간(번호 · 누적 거리 · 입력칸들). 진직도 계산기와 HE 화면 공용.
+     이미 있는 줄은 건드리지 않고 구간 수가 바뀔 때 끝에서 줄을 더하거나 뺀다(포커스·키패드 유지).
+     간격만 바뀌면 거리 글자만 갱신한다. cols:[{key,label}], getInit(key,i)→초기 문자열, onInput(key,i,inp) */
+  function syncRows(host,cols,n,pitch,getInit,onInput){
+    if(!host.__vt||!host.contains(host.__vt)){
+      host.innerHTML='<div class="vt-row vt-head" style="--cols:'+cols.length+'"><div>구간</div><div>거리</div>'+
+        cols.map(function(c){return '<div>'+c.label+'</div>';}).join('')+'</div><div class="vt-body"></div>';
+      host.__vt=host.querySelector('.vt-body');
+    }
+    var body=host.__vt;
+    while(body.children.length>n) body.removeChild(body.lastChild);
+    for(var i=body.children.length;i<n;i++){
+      var row=document.createElement('div'); row.className='vt-row'; row.style.setProperty('--cols',cols.length);
+      var h='<div class="vt-n">'+(i+1)+'</div><div class="vt-d"></div>';
+      cols.forEach(function(c){
+        h+='<div class="vt-cell"><input type="number" inputmode="decimal" placeholder="–" data-col="'+c.key+'" data-i="'+i+'" value="'+getInit(c.key,i)+'">'+signBtnHTML()+'</div>';
+      });
+      row.innerHTML=h; body.appendChild(row);
+      row.querySelectorAll('input').forEach(function(inp){
+        inp.addEventListener('focus',function(){ this.select(); });
+        inp.addEventListener('input',function(){ onInput(inp.dataset.col,+inp.dataset.i,inp); });
+        var btn=inp.parentElement.querySelector('.signbtn');
+        wireSignBtn(btn,inp);
+        inp.addEventListener('input',function(){ refreshSignBtn(btn,inp); });
+        refreshSignBtn(btn,inp);
+      });
+    }
+    for(var j=0;j<body.children.length;j++) body.children[j].children[1].textContent=pitch?fmtLen((j+1)*pitch):'';
+  }
+    function straightness(h){var mx=h[0],mn=h[0];for(var i=1;i<h.length;i++){if(h[i]>mx)mx=h[i];if(h[i]<mn)mn=h[i];}return mx-mn;}
 
   var STRAIGHT={};
 
@@ -1731,9 +1792,9 @@
       setupHTML(idp)+'</div>'+
 
       '<div class="card"><div class="card-h"><span class="dot"></span><h2>구간별 수준기 값</h2></div>'+
-      '<div class="notice"><span class="nic">＋</span><div>물방울이 <b>우측</b>으로 이동 → <b>＋</b> (기본)<br>'+
-      '물방울이 <b>좌측</b>으로 이동 → <b class="neg">－</b> · 부호 버튼을 눌러 전환</div></div>'+
-      '<div class="seg-scroll"><div class="seg-row" id="'+idp+'-segs"></div></div></div>'+
+      '<div class="notice"><span class="nic">＋</span><div>값이 음수면 <b class="neg">±</b> 버튼으로 부호를 바꿉니다<br>'+
+      '(물방울 우측 이동 = <b>＋</b>, 좌측 이동 = <b class="neg">－</b>)</div></div>'+
+      '<div id="'+idp+'-segs"></div></div>'+
 
       '<div class="card"><div class="card-h"><span class="dot"></span><h2>진직도 결과</h2>'+
       '<span class="tag" id="'+idp+'-cntTag">— 구간</span></div>'+
@@ -1754,42 +1815,18 @@
     function curSegLen(){ return S.segLen(); }
 
     function rebuild(){
-      var n=Math.round(parseFloat(nEl.value)),SL=curSegLen();
-      if(!(n>=1)||!SL){ml.value="";segs.innerHTML="";chart.innerHTML="";tbody.innerHTML="";cntTag.textContent="— 구간";return;}
-      ml.value=fmtLen(SL*n);cntTag.textContent=n+" 구간";
+      var n=S.count(),SL=S.segLen();
+      if(!n||!SL){segs.innerHTML="";segs.__vt=null;chart.innerHTML="";tbody.innerHTML="";cntTag.textContent="— 구간";return;}
+      cntTag.textContent=n+" 구간";
       meas=meas.slice(0,n);while(meas.length<n)meas.push(0);
-      segs.innerHTML="";
-      for(var i=0;i<n;i++){
-        var c=document.createElement('div');c.className='seg-cell wide';
-        c.innerHTML='<div class="cl">'+fmtLen(i*SL)+'~'+fmtLen((i+1)*SL)+'</div>'+
-          '<div class="sgn-row"><button type="button" class="sgn'+(meas[i]<0?' neg':'')+'" data-i="'+i+'">'+(meas[i]<0?'－':'＋')+'</button>'+
-          '<input type="number" inputmode="decimal" placeholder="–" data-i="'+i+'"'+(meas[i]<0?' class="neg"':'')+' value="'+(meas[i]?Math.abs(meas[i]):'')+'"></div>';
-        segs.appendChild(c);
-      }
-      segs.querySelectorAll('input').forEach(function(inp){
-        inp.addEventListener('focus',function(){ this.select(); });
-        inp.addEventListener('input',function(){
-          var i=+inp.dataset.i;
-          var mag=Math.abs(parseFloat(inp.value)||0);
-          var neg=segs.querySelector('.sgn[data-i="'+i+'"]').classList.contains('neg');
-          meas[i]=neg?-mag:mag; calc();
-        });
-      });
-      segs.querySelectorAll('.sgn').forEach(function(btn){
-        btn.addEventListener('click',function(){
-          var i=+btn.dataset.i;
-          var neg=btn.classList.toggle('neg');
-          btn.textContent=neg?'－':'＋';
-          var inp=segs.querySelector('input[data-i="'+i+'"]');
-          inp.classList.toggle('neg',neg);
-          var mag=Math.abs(parseFloat(inp.value)||0);
-          meas[i]=neg?-mag:mag; calc();
-        });
-      });
+      // 값을 입력하는 동안에는 입력칸을 다시 그리지 않는다 — 구간 수가 바뀔 때만 줄을 더하거나 뺀다
+      syncRows(segs,[{key:'v',label:'수준기'}],n,SL,
+        function(k,i){return meas[i]?String(meas[i]):'';},
+        function(k,i,inp){ meas[i]=parseFloat(inp.value)||0; calc(); });
       calc();
     }
 
-    function calc(){
+        function calc(){
       var SL=curSegLen(),N=meas.length;
       var d=computeDetail(meas,resEl.value,SL),h=d.um,sv=straightness(h); // h·sv 모두 μm
       STRAIGHT[idp]={res:resEl.value,lv:parseFloat(lv.value)||0,pitch:parseFloat(pitch.value)||0,
@@ -2093,17 +2130,6 @@
     showPanel('he');
   }
 
-  function heCellHTML(side,pt,pitch){
-    var st=heStateFor(HE_CURRENT_PART);
-    var arr = side==='L' ? st.L : st.R;
-    var entered = side==='L' ? st.enteredL : st.enteredR;
-    var v = entered[pt] ? arr[pt] : '';
-    return '<div class="he-cell"><div class="he-pt-head">'+(pt+1)+(pitch?' · '+fmtLen((pt+1)*pitch):'')+'</div><div class="he-cell-row">'+
-      '<input type="number" inputmode="decimal" data-side="'+side+'" data-pt="'+pt+'" placeholder="–" value="'+v+'">'+
-      signBtnHTML('data-sign-side="'+side+'" data-sign-pt="'+pt+'"')+
-      '</div></div>';
-  }
-
   function renderHEPanel(part){
     var spec=getHESpec(CUR.vendor,CUR.model);
     var st=heStateFor(part);
@@ -2126,9 +2152,10 @@
     document.getElementById('he-target-line').innerHTML=
       '<span class="k">구배 목표치</span><span>L <b>'+fmtHE(s1.L)+'</b>μm</span><span>R <b>'+fmtHE(s1.R)+'</b>μm</span>';
 
+    var segHost=document.getElementById('he-segs'); segHost.innerHTML=''; segHost.__vt=null;
     if(!st.cfg) st.cfg={res:'0.02/m',lv:200,pitch:200,n:heDefaultN(spec)};
     document.getElementById('he-setup').innerHTML=setupHTML('he',st.cfg);
-    function saveCfg(){ var r=HE_SETUP.read(); st.cfg={res:r.res,lv:r.lv,pitch:r.pitch,n:r.n}; }
+    function saveCfg(){ var r=HE_SETUP.read(); st.cfg={res:r.res,lv:r.lv,pitch:r.pitch,n:r.n,ml:r.ml,auto:r.auto}; }
     HE_SETUP=wireSetup('he',st.cfg,
       function(){ saveCfg(); renderHEInputs(part); },
       function(){ saveCfg(); });   // 분해능은 기록용 — 계산에 쓰지 않으므로 다시 계산하지 않는다
@@ -2144,42 +2171,22 @@
       arr.length=n; en.length=n;
       for(var i=0;i<n;i++){ if(typeof arr[i]!=='number') arr[i]=0; en[i]=!!en[i]; }
     });
-    var html='';
-    if(n>0){
-      ['L','R'].forEach(function(side){
-        html+='<div class="he-side">'+side+'</div><div class="he-grid">';
-        for(var i=0;i<n;i++) html+=heCellHTML(side,i,pitch);
-        html+='</div>';
-      });
-    }
-    document.getElementById('he-segs').innerHTML=html;
-
-    document.querySelectorAll('#he-segs input').forEach(function(inp){
-      inp.setAttribute('inputmode','decimal');
-      inp.addEventListener('focus',function(){ this.select(); });
-      inp.addEventListener('input',function(e){
-        var side=e.target.dataset.side, pt=+e.target.dataset.pt;
-        var arr = side==='L' ? st.L : st.R;
-        var entered = side==='L' ? st.enteredL : st.enteredR;
-        var val=parseFloat(e.target.value);
-        arr[pt]=isNaN(val)?0:val;
-        entered[pt]=(e.target.value!=='');
-        renderHEChart(part);
+    var host=document.getElementById('he-segs');
+    if(!n){ host.innerHTML=''; host.__vt=null; }
+    else syncRows(host,[{key:'L',label:'L'},{key:'R',label:'R'}],n,pitch,
+      function(side,i){ return st['entered'+side][i] ? String(st[side][i]) : ''; },
+      function(side,i,inp){
+        var val=parseFloat(inp.value);
+        st[side][i]=isNaN(val)?0:val;
+        st['entered'+side][i]=(inp.value!=='');
+        renderHEChart(part);         // 그래프·결과 숫자만 갱신 — 입력칸은 그대로 둔다
         updateHEFillStat(part);
       });
-      var btn=inp.parentElement.querySelector('.signbtn');
-      if(btn){
-        wireSignBtn(btn,inp);
-        inp.addEventListener('input',function(){ refreshSignBtn(btn,inp); });
-        refreshSignBtn(btn,inp);
-      }
-    });
-
     renderHEChart(part);
     updateHEFillStat(part);
   }
 
-  document.getElementById('he-mark').addEventListener('input',function(){
+    document.getElementById('he-mark').addEventListener('input',function(){
     if(HE_CURRENT_PART) heStateFor(HE_CURRENT_PART).mark=this.value;
   });
 
@@ -2263,7 +2270,7 @@
   }
   function renderHEChart(part){
     var el=document.getElementById('he-charts');
-    if(el) el.innerHTML=heDrawChart(part);
+    if(el) el.innerHTML=heDrawChart(part)||'<div class="he-empty">값을 입력하면 구배 형상이 표시됩니다</div>';
     var rs=document.getElementById('he-result');
     if(rs) rs.innerHTML=heResultHTML(part);
   }
@@ -2304,7 +2311,7 @@
       if(st.enteredL.some(Boolean)) L.push(sideLine("L",st.L,st.enteredL));
       if(st.enteredR.some(Boolean)) L.push(sideLine("R",st.R,st.enteredR));
       // 신규 줄: HE 측정 설정 (분해능/수준기 길이/구간 간격/총 길이/구간 수) — STRAIGHTCFG와 같은 순서
-      if(anyIn) L.push(["HECFG",part,cfg.res,cfg.lv,cfg.pitch,cfg.pitch*cfg.n,cfg.n].join(","));
+      if(anyIn) L.push(["HECFG",part,cfg.res,cfg.lv,cfg.pitch,(cfg.ml||cfg.pitch*cfg.n),cfg.n].join(","));
       L.push(["REF","HE",s0.name,s0.distStart,s0.distEnd,s0.L,s0.R].join(","));
       L.push(["REF","HE",s1.name,s1.distStart,s1.distEnd,s1.L,s1.R].join(","));
       L.push("[END]");
