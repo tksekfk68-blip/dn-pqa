@@ -210,13 +210,12 @@
   .auto-tag[hidden]{display:none;}
   #he-charts{min-height:190px;} #he-result{min-height:96px;}
   .he-empty{font-size:12px;color:var(--lgray);text-align:center;padding:70px 0;}  /* Y축 진직 측정 화면: 세로 표 (구간 좌표 | 입력칸 | ±) — 폰 360px에서도 가로 스크롤 없음 */
+  .part-head .tag{margin-left:auto;font-size:12px;color:var(--gray);background:var(--paper);padding:3px 9px;border-radius:20px;font-weight:600}
   .eq-row{display:grid;grid-template-columns:62px minmax(0,1fr) 28px;gap:6px;align-items:center;margin-bottom:6px}
   .eq-pos{font-size:13px;font-weight:700;color:var(--dgray);text-align:right;white-space:nowrap}
   .eq-pos small{font-size:10px;color:var(--gray);font-weight:600}
   .eq-row input{width:100%;min-width:0;height:40px;text-align:center;font-size:17px;font-weight:700;padding:0 2px}
   .eq-row input.neg{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
-  .eq-auto{font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-soft);border-radius:8px;padding:1px 6px;margin-left:2px}
-  .eq-auto-in{background:var(--paper);color:var(--gray)}
   .eq-res{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:8px}
   .eq-res .v{font-size:34px;font-weight:800;color:var(--navy);line-height:1.1}
   .eq-res .u{font-size:12px;color:var(--gray);font-weight:600}
@@ -479,7 +478,7 @@
             <div class="item-card-ref">대조립 정도조정 전 · 호기 기준</div>
           </button>
           <button type="button" class="item-card wide" id="card-EQSTRAIGHT">
-            <div class="item-card-top"><span class="item-card-name">진직도</span><span class="item-card-badge" id="badge-EQSTRAIGHT">○ 미측정</span></div>
+            <div class="item-card-top"><span class="item-card-name">Y축 진직도</span><span class="item-card-badge" id="badge-EQSTRAIGHT">○ 미측정</span></div>
             <div class="item-card-ref">대조립 정도조정 전 · 호기 기준</div>
           </button>
         </div>
@@ -643,23 +642,12 @@
 
       <!-- ===== Y축 진직 측정 (조립 후 장비, 대조립 정도조정 전) — 이송레벨과 별개의 독립 화면 ===== -->
       <div class="panel" id="panel-eqs">
-        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>진직도 측정</h2></div>
-        <div class="card">
-          <div class="card-h"><span class="dot"></span><h2>측정 설정</h2><span class="tag" id="eq-unit">호기 —</span></div>
-          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
-            <div><label class="f">축</label><select id="eq-axis" style="width:100%"><option value="Y" selected>Y</option></select></div>
-            <div><label class="f">측정 길이 (mm)</label><input type="number" inputmode="decimal" id="eq-len" value="650"></div>
-            <div><label class="f">구간 수</label><input type="number" inputmode="numeric" id="eq-n" min="2" step="1" value="9"></div>
-            <div><label class="f">구간 간격 (mm) <span class="eq-auto">자동</span></label><input type="number" id="eq-pitch" class="eq-auto-in" readonly tabindex="-1"></div>
-          </div>
-        </div>
+        <div class="part-head"><button class="part-back" data-back="cards">‹</button><h2>Y축 진직도</h2><span class="tag" id="eq-unit">호기 —</span></div>
 
         <div class="card">
           <div class="card-h"><span class="dot"></span><h2>구간별 측정값 (μm)</h2></div>
-          <div class="notice"><span class="nic">!</span><div>구간 좌표(중앙 0 기준)마다 값을 <b>μm</b>로 입력하세요. 음수는 <b>±</b> 버튼을 누르세요.</div></div>
           <div id="eq-rows"></div>
         </div>
-
         <div class="card" id="eq-result-card">
           <div class="card-h"><span class="dot"></span><h2>전구간</h2><span class="tag">양 끝 직선 제거 후 최대−최소</span></div>
           <div class="eq-res"><span class="v" id="eq-full">—</span><span class="u">μm</span><span class="h" id="eq-hint"></span></div>
@@ -667,7 +655,7 @@
         </div>
 
         <div class="savebar" id="eq-savebar">
-          <button class="btn btn-blue" id="eq-file">저장 · 진직도 값 저장</button>
+          <button class="btn btn-blue" id="eq-file">저장 · Y축 진직도 값 저장</button>
         </div>
       </div>
 
@@ -763,6 +751,20 @@
   };
 
   var CUR={vendor:null,model:null,unit:"",who:""};
+
+  /* ===== Y축 진직도 — 기종별 설정 표 (이 측정이 있는 기종만 줄을 둔다) =====
+     여기에 줄이 있는 업체·기종을 골랐을 때만 "Y축 진직도" 카드가 나오고, 축 · 측정 길이(mm) · 구간 수가 이 값으로 고정된다.
+     기종을 추가하려면 이 표에 줄만 더하면 된다 (예: DVF4000 · DVF5000). */
+  var EQ_STRAIGHT_CFG=[
+    {vendor:"대영", model:"DVF6500", axis:"Y", length:650, n:9}
+  ];
+  function eqStraightCfg(){
+    for(var i=0;i<EQ_STRAIGHT_CFG.length;i++){
+      var r=EQ_STRAIGHT_CFG[i];
+      if(r.vendor===CUR.vendor && r.model===CUR.model) return r;
+    }
+    return null;
+  }
   function fmt(v){return v===null?"—":(Math.round(v*10)/10);}
 
   /* ===== 부호 전환(±) 버튼 — 숫자 키패드에 "-" 키가 없는 폰 대응.
@@ -1153,7 +1155,7 @@
       if(entry.parts){
         Object.keys(entry.parts).forEach(function(name){
           if(knownPartNames.indexOf(name)===-1){
-            partsHtml += '<span class="rl-part done">'+escapeHTML(name==='EQSTRAIGHT'?'진직도':name)+'</span>';
+            partsHtml += '<span class="rl-part done">'+escapeHTML(name==='EQSTRAIGHT'?'Y축 진직도':name)+'</span>';
           }
         });
       }
@@ -1391,6 +1393,9 @@
     var lvBadge=document.getElementById('badge-LEVEL');
     if(lv){ lvBadge.textContent="● 완료"; lvBadge.classList.add('done'); }
     else{ lvBadge.textContent="○ 미측정"; lvBadge.classList.remove('done'); }
+
+    var eqsCard=document.getElementById('card-EQSTRAIGHT');
+    if(eqsCard) eqsCard.hidden = !eqStraightCfg();          // 설정 표에 없는 기종에서는 카드 자체를 표시하지 않는다
 
     var eqs=getPartSent("EQSTRAIGHT");
     var eqsBadge=document.getElementById('badge-EQSTRAIGHT');
@@ -2539,15 +2544,16 @@
      이송레벨 화면·[LEVEL v3]와 별개의 독립 화면이며, 대물 측정 화면의 "진직도 계산기"와도 무관하다.
      호기/기종/측정자는 상위 공용 선택값(CUR)을 그대로 쓰고 각인번호는 받지 않는다. 입력 단위 μm, 부호 그대로 저장. */
   (function(){
-    var rowsHost=document.getElementById('eq-rows'), lenEl=document.getElementById('eq-len'), nEl=document.getElementById('eq-n'),
-        pitchEl=document.getElementById('eq-pitch'), axisEl=document.getElementById('eq-axis'),
+    var rowsHost=document.getElementById('eq-rows'),
         fullEl=document.getElementById('eq-full'), hintEl=document.getElementById('eq-hint'), graphEl=document.getElementById('eq-graph');
     var vals=[], ent=[];            // vals[i]: 입력 숫자(μm), ent[i]: 입력됨 여부 (빈 칸과 0을 구분)
     var SENT_EQ=[];                 // 이번 세션 저장 기록 (이 화면 전용 중복 확인 — 이송레벨의 SENT와 섞지 않는다)
 
+    /* 축 · 측정 길이 · 구간 수는 입력하지 않고 기종별 설정 표(EQ_STRAIGHT_CFG)에서 가져온다 */
     function cfg(){
-      var L=parseFloat(lenEl.value), n=Math.round(parseFloat(nEl.value));
-      return {L:(L>0?L:0), n:(n>=2?n:0)};
+      var r=eqStraightCfg();
+      if(!r) return {L:0, n:0, axis:"Y"};
+      return {L:(r.length>0?r.length:0), n:(r.n>=2?Math.round(r.n):0), axis:r.axis||"Y"};
     }
     function roundAway(x){ return x<0 ? -Math.round(-x) : Math.round(x); }      // 좌표 표시용: 0에서 먼 쪽으로 반올림
     function positions(c){                                                      // 중앙 0 기준 좌우 대칭 (650 · 9점 → -325 … 0 … +325)
@@ -2587,14 +2593,13 @@
         })(row.querySelector('input'),row.querySelector('.signbtn'));
       }
       for(var j=0;j<rowsHost.children.length;j++) rowsHost.children[j].firstChild.innerHTML=posLabel(pos[j]);
-      var pv=pitchOf(c); pitchEl.value=pv?String(pv):'';
       if(!c.n) rowsHost.innerHTML='';
       update();
     }
 
     function update(){
       var c=cfg(), done=0; for(var i=0;i<c.n;i++) if(ent[i]) done++;
-      if(!c.n){ fullEl.textContent='—'; hintEl.textContent='구간 수는 2 이상, 측정 길이는 0보다 커야 합니다'; graphEl.innerHTML=''; return; }
+      if(!c.n){ fullEl.textContent='—'; hintEl.textContent=''; graphEl.innerHTML=''; return; }
       if(done===c.n){ fullEl.textContent=fmt(straightFull(vals.slice(0,c.n))); hintEl.textContent=''; }
       else { fullEl.textContent='—'; hintEl.textContent='전 구간을 입력하면 계산됩니다 ('+done+'/'+c.n+')'; }
       drawGraph(c);
@@ -2623,11 +2628,11 @@
       graphEl.innerHTML='<div class="chart-title"><span class="nm">형상 (μm) · 가로축 = 구간 좌표 (mm)</span></div><div class="chart-wrap"><svg width="100%" viewBox="0 0 '+W+' '+H+'">'+g+'</svg></div>';
     }
 
-    lenEl.addEventListener('input',syncRows);
-    nEl.addEventListener('input',syncRows);
+
 
     document.getElementById('card-EQSTRAIGHT').addEventListener('click',function(){
       document.getElementById('eq-unit').textContent='호기 '+((CUR.unit||'').trim()||'—');
+      syncRows();                       // 기종별 설정(구간 수)에 맞춰 입력칸·좌표를 맞춘다
       showPanel('eqs');
     });
 
@@ -2635,10 +2640,10 @@
       var unit=(CUR.unit||"").trim();
       if(!unit){ alert("호기는 필수입니다. 대물 정보에서 호기를 입력하세요."); return; }
       var c=cfg();
-      if(!c.n){ alert("구간 수는 2 이상, 측정 길이는 0보다 커야 합니다."); return; }
+      if(!c.n){ alert("이 기종은 Y축 진직도 설정이 없습니다."); return; }
       var any=false; for(var i=0;i<c.n;i++) if(ent[i]) any=true;
       if(!any){ alert("입력된 값이 없습니다."); return; }
-      var model=CUR.model||"", axis=axisEl.value||"Y";
+      var model=CUR.model||"", axis=c.axis;
       var dup=null; SENT_EQ.forEach(function(r){ if(r.model===model&&r.unit===unit&&r.axis===axis) dup=r; });
       if(dup && !confirm("동일한 정보가 이미 기록되었습니다.\n\n"+model+" · 호기 "+unit+" · "+axis+"축 진직도\n기록 시각 "+dup.at+"\n\n재측정으로 다시 기록하시겠습니까?")) return;
       var t=new Date(); SENT_EQ.push({model:model,unit:unit,axis:axis,at:pad2(t.getHours())+":"+pad2(t.getMinutes())});
