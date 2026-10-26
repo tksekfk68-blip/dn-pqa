@@ -2311,7 +2311,7 @@
     return '<div class="chart-title"><span class="nm">구배 형상 · 누적 합 (μm)</span>'+legend+'</div>'+
       '<div class="chart-wrap">'+svg+'</div>';
   }
-  // 구배(누적 합)가 같은 기종 분포(평균 ± 2σ, 대시보드와 같은 기준) 안인지 표시 — 모든 구간을 입력해 합계가 확정됐을 때만. 요약값이 없으면 숨김.
+  // 구배(누적 합)가 같은 기종 분포(크게 벗어난 값을 한 번 제외하고 재계산한 평균±2σ — 분포 요약 값 사용, 대시보드와 같은 기준) 안인지 표시 — 모든 구간을 입력해 합계가 확정됐을 때만. 요약값이 없으면 숨김.
   function heDistChip(part,side,cs){
     if(!DIST_MAP||!cs) return '';
     var en=heStateFor(part)['entered'+side];
