@@ -231,6 +231,8 @@
   .he-res .v{font-size:16px;font-weight:800;color:var(--navy);}
   .he-dist{display:block;margin-top:3px;font-size:12px;font-weight:800;line-height:1.3;}
   .he-dist.in{color:var(--blue);} .he-dist.out{color:var(--red);}
+  .he-near{display:block;margin-top:3px;font-size:12px;font-weight:800;line-height:1.3;}
+  .he-near.in{color:var(--blue);} .he-near.out{color:#E8891A;}
   .he-dist-sub{font-size:10px;font-weight:600;color:var(--gray);line-height:1.3;}
   .he-res .v small{font-size:10.5px;color:var(--gray);font-weight:600;margin-left:4px;}
   .he-pt-head{font-size:9.5px;color:var(--gray);font-weight:700;text-align:center;}
@@ -1086,7 +1088,9 @@
         var lo=parseFloat(r[3]), hi=parseFloat(r[4]), n=parseInt(r[5],10);
         if(!m||!p||(sd!=='L'&&sd!=='R')||isNaN(lo)||isNaN(hi)||isNaN(n)) continue;
         var key=distModelKey(m)+'|'+p+'|'+sd;
-        if(!map[key]||map[key].n<n) map[key]={lo:lo,hi:hi,n:n,asof:String(r[6]||'').trim()};
+        var tg=parseFloat(r[7]), tlo=parseFloat(r[8]), thi=parseFloat(r[9]);   // 뒤에 추가된 칸(목표·목표하한·목표상한) — 없으면 목표 표시만 숨김
+        if(!map[key]||map[key].n<n) map[key]={lo:lo,hi:hi,n:n,asof:String(r[6]||'').trim(),
+          tg:(isNaN(tg)||isNaN(tlo)||isNaN(thi))?null:{t:tg,lo:tlo,hi:thi}};
       }
       DIST_MAP=map;
       if(HE_CURRENT_PART){ try{ renderHEChart(HE_CURRENT_PART); }catch(e){} }
@@ -2317,9 +2321,13 @@
     var en=heStateFor(part)['entered'+side];
     if(!en.length||!en.every(Boolean)) return '';
     var d=DIST_MAP[distModelKey(CUR.model)+'|'+part+'|'+side]; if(!d) return '';
-    var inside=cs.cum>=d.lo-1e-9&&cs.cum<=d.hi+1e-9;
-    return '<div class="he-dist '+(inside?'in':'out')+'">'+(inside?('같은 기종 '+d.n+'대 분포 안'):'분포 벗어남')+'</div>'+
-      '<div class="he-dist-sub">같은 기종 '+d.n+'대 · 분포 '+fmt(d.lo)+' ~ '+fmt(d.hi)+' μm'+(d.asof?' · 기준 '+d.asof:'')+'</div>';
+    var inside=cs.cum>=d.lo-1e-9&&cs.cum<=d.hi+1e-9, g=d.tg, near=g?(cs.cum>=g.lo-1e-9&&cs.cum<=g.hi+1e-9):null;
+    // 표시 순서: ① 목표 근처 / 목표에서 멂 (목표에서 멂만 주황) ② 같은 기종 N대 분포 안 / 분포 벗어남 ③ 작은 글씨 근거. 목표 칸이 없으면 ①③의 목표 줄만 숨긴다.
+    return (g?'<div class="he-near '+(near?'in':'out')+'">'+(near?'목표 근처':'목표에서 멂')+'</div>':'')+
+      '<div class="he-dist '+(inside?'in':'out')+'">'+(inside?('같은 기종 '+d.n+'대 분포 안'):'분포 벗어남')+'</div>'+
+      '<div class="he-dist-sub">같은 기종 '+d.n+'대 · 분포 '+fmt(d.lo)+' ~ '+fmt(d.hi)+' μm'+(d.asof?' · 기준 '+d.asof:'')+'</div>'+
+      // 근거 글씨의 범위는 안쪽으로 반올림해서 표시 — 보이는 범위 안의 값은 항상 "목표 근처"와 일치한다
+      (g?'<div class="he-dist-sub">목표 '+g.t.toFixed(1)+' (범위 '+(Math.ceil(g.lo*10-1e-9)/10).toFixed(1)+'~'+(Math.floor(g.hi*10+1e-9)/10).toFixed(1)+')</div>':'');
   }
   function heResultHTML(part){
     var spec=getHESpec(CUR.vendor,CUR.model);
